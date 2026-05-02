@@ -8,468 +8,473 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Segoe UI',-apple-system,sans-serif;background:#f1f5f9;display:flex;height:100vh;overflow:hidden;}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.sidebar{width:220px;background:#18181b;display:flex;flex-direction:column;height:100vh;flex-shrink:0;}
-.logo{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07);}
-.logo h1{color:#fff;font-size:17px;font-weight:900;letter-spacing:-.03em;}
-.logo p{color:#52525b;font-size:11px;margin-top:2px;}
-.sync-status{color:#22c55e;font-size:10px;margin-top:5px;}
-nav{flex:1;padding:9px 7px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;}
-.nav-btn{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;border-radius:9px;border:none;cursor:pointer;font-family:inherit;font-size:13px;background:transparent;color:#71717a;text-align:left;width:100%;}
-.nav-btn:hover{background:rgba(255,255,255,.05);color:#a1a1aa;}
-.nav-btn.active{background:rgba(99,102,241,.2);color:#a5b4fc;font-weight:700;}
-.nav-icon{font-size:14px;margin-right:8px;}
-.badge{background:#ef4444;color:#fff;font-size:10px;font-weight:800;border-radius:20px;padding:1px 6px;}
-.sidebar-footer{padding:0 9px 0;}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* SIDEBAR */
+.sb{width:220px;background:#18181b;display:flex;flex-direction:column;height:100vh;flex-shrink:0;}
+.sb-logo{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07);}
+.sb-logo h1{color:#fff;font-size:17px;font-weight:900;letter-spacing:-.03em;}
+.sb-logo p{color:#52525b;font-size:11px;margin-top:2px;}
+.sb-sync{color:#22c55e;font-size:10px;margin-top:5px;}
+.sb-nav{flex:1;padding:9px 7px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;}
+.nb{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;border-radius:9px;border:none;cursor:pointer;font-family:inherit;font-size:13px;background:transparent;color:#71717a;text-align:left;width:100%;transition:all .15s;}
+.nb:hover{background:rgba(255,255,255,.05);color:#a1a1aa;}
+.nb.on{background:rgba(99,102,241,.2);color:#a5b4fc;font-weight:700;}
+.ni{font-size:14px;margin-right:8px;}
+.bdg{background:#ef4444;color:#fff;font-size:10px;font-weight:800;border-radius:20px;padding:1px 6px;}
+.sb-ft{padding:0 9px 0;}
 .sync-btn{width:100%;padding:7px;border-radius:8px;border:none;background:rgba(99,102,241,.15);color:#a5b4fc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;margin-bottom:7px;}
-.admin-box{background:rgba(255,255,255,.04);border-radius:9px;padding:9px 11px;margin-bottom:0;}
-.admin-box .lbl{color:#3f3f46;font-size:10px;font-weight:700;text-transform:uppercase;}
-.admin-box .nm{color:#a1a1aa;font-size:12px;margin-top:2px;}
-.admin-box .info{color:#3f3f46;font-size:10px;margin-top:3px;}
-.content{flex:1;overflow-y:auto;padding:24px 22px;}
-.content-inner{max-width:1100px;margin:0 auto;animation:fade .2s ease;}
+.user-box{background:rgba(255,255,255,.04);border-radius:9px;padding:9px 11px;margin-bottom:8px;}
+
+/* CONTENT */
+.ct{flex:1;overflow-y:auto;padding:24px 22px;}
+.ci{max-width:1140px;margin:0 auto;animation:fade .2s ease;}
 h2{font-size:20px;font-weight:900;color:#111827;margin:0 0 4px;}
-.subtitle{color:#6b7280;font-size:13px;margin-bottom:18px;}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-bottom:16px;}
-.kpi{background:#fff;border-radius:12px;padding:14px 17px;border-left:4px solid #ccc;box-shadow:0 1px 3px rgba(0,0,0,.07);}
-.kpi .lbl{font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
-.kpi .val{font-size:20px;font-weight:900;color:#111827;margin-top:2px;}
-.kpi .sub{font-size:11px;color:#9ca3af;margin-top:1px;}
-.payback-box{border-radius:14px;padding:16px 20px;margin-bottom:16px;border:1px solid;}
-.bar-track{background:rgba(0,0,0,.08);border-radius:20px;height:9px;overflow:hidden;margin:8px 0 4px;}
-.bar-fill{height:100%;border-radius:20px;transition:width .6s;}
-.action-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
-.action-card{border-radius:14px;padding:16px 18px;text-align:center;}
-.action-card .num{font-size:32px;font-weight:900;}
-.action-card .lbl{font-size:12px;font-weight:700;opacity:.8;margin-top:2px;}
-.chart-box{background:#fff;border-radius:13px;padding:18px;border:1px solid #e5e7eb;}
-.chart-box h3{font-size:13px;font-weight:700;color:#111827;margin-bottom:12px;}
-.bars{display:flex;align-items:flex-end;gap:8px;height:90px;}
-.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
-.bar-col .bar{width:100%;background:#4f46e5;border-radius:4px 4px 0 0;min-height:4px;}
-.bar-col .lbl{font-size:11px;color:#6b7280;}
-.bar-col .val{font-size:9px;color:#9ca3af;}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.card{background:#fff;border-radius:13px;padding:18px;border:1px solid #e5e7eb;}
-.card h3{font-size:13px;font-weight:700;color:#111827;margin-bottom:12px;}
-.search-box{width:100%;padding:8px 13px;border-radius:9px;border:1px solid #d1d5db;font-size:13px;font-family:inherit;outline:none;margin-bottom:12px;}
-.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
-.filter-btn{padding:6px 14px;border-radius:20px;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:12px;background:#f3f4f6;color:#374151;}
-.filter-btn.active{background:#4f46e5;color:#fff;}
-.table-wrap{background:#fff;border-radius:13px;border:1px solid #e5e7eb;overflow:hidden;margin-bottom:10px;}
+.sub{color:#6b7280;font-size:13px;margin-bottom:18px;}
+
+/* CARDS */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px;}
+.kcard{background:#fff;border-radius:12px;padding:14px 16px;border-left:4px solid #ccc;box-shadow:0 1px 3px rgba(0,0,0,.07);}
+.kcard .kl{font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.kcard .kv{font-size:19px;font-weight:900;color:#111827;margin-top:2px;}
+.kcard .ks{font-size:11px;color:#9ca3af;margin-top:1px;}
+
+/* TAGS */
+.tag{border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;display:inline-block;white-space:nowrap;}
+.tg{background:#d1fae5;color:#065f46;}
+.ty{background:#fef3c7;color:#92400e;}
+.tr{background:#fee2e2;color:#991b1b;}
+.tb{background:#dbeafe;color:#1e40af;}
+.tp{background:#ede9fe;color:#5b21b6;}
+.to{background:#ffedd5;color:#9a3412;}
+.tgr{background:#f3f4f6;color:#374151;}
+
+/* TABLE */
+.twrap{background:#fff;border-radius:13px;border:1px solid #e5e7eb;overflow:hidden;margin-bottom:10px;}
+.tscroll{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
 thead tr{background:#f9fafb;border-bottom:1px solid #e5e7eb;}
-th{padding:9px 11px;text-align:left;font-weight:700;color:#374151;font-size:11px;white-space:nowrap;}
+th{padding:9px 10px;text-align:left;font-weight:700;color:#374151;font-size:11px;white-space:nowrap;}
 tbody tr{border-bottom:1px solid #f3f4f6;}
 tbody tr:nth-child(even){background:#fafafa;}
-td{padding:7px 11px;color:#374151;}
-.tag{border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;display:inline-block;}
-.tag-green{background:#d1fae5;color:#065f46;}
-.tag-yellow{background:#fef3c7;color:#92400e;}
-.tag-red{background:#fee2e2;color:#991b1b;}
-.tag-blue{background:#dbeafe;color:#1e40af;}
-.tag-purple{background:#ede9fe;color:#5b21b6;}
-.tag-orange{background:#ffedd5;color:#9a3412;}
-.tag-gray{background:#f3f4f6;color:#374151;}
-.btn{padding:4px 10px;border-radius:7px;border:none;background:#f3f4f6;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;}
-.totals{font-size:13px;color:#6b7280;display:flex;gap:18px;flex-wrap:wrap;}
-.sku-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
-.sku-card{background:#fff;border-radius:13px;border:1px solid #e5e7eb;overflow:hidden;}
-.sku-header{padding:9px 13px;display:flex;justify-content:space-between;}
-.sku-header span:first-child{color:#fff;font-weight:800;font-size:12px;}
-.sku-header span:last-child{color:rgba(255,255,255,.55);font-size:10px;}
-.sku-img{height:110px;overflow:hidden;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:26px;}
-.sku-img img{width:100%;height:100%;object-fit:cover;}
-.sku-body{padding:13px;}
-.sku-name{font-weight:800;font-size:14px;color:#111827;margin-bottom:9px;}
-.sku-meta{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:12px;}
-.sku-meta-item{border-radius:7px;padding:5px 7px;}
-.sku-meta-item .lbl{color:#9ca3af;font-size:10px;}
-.sku-meta-item .val{font-weight:700;}
-.sku-consig{margin-top:7px;border-radius:7px;padding:5px 9px;display:flex;justify-content:space-between;font-size:11px;background:#f0fdf4;}
-.sku-link{display:block;margin-top:7px;font-size:11px;color:#4f46e5;text-decoration:none;text-align:center;background:#eef2ff;padding:4px;border-radius:6px;}
+td{padding:7px 10px;color:#374151;vertical-align:middle;}
+
+/* BUTTONS */
+.btn-pri{padding:8px 18px;border-radius:9px;border:none;background:#4f46e5;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;}
+.btn-sec{padding:8px 16px;border-radius:9px;border:none;background:#f3f4f6;color:#374151;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;}
+.btn-grn{padding:8px 18px;border-radius:9px;border:none;background:#16a34a;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;}
+.btn-sm{padding:3px 8px;border-radius:6px;border:none;background:#eef2ff;color:#4f46e5;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;margin-right:3px;}
+.btn-view{padding:3px 8px;border-radius:6px;border:none;background:#f3f4f6;color:#374151;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;}
+
+/* SEARCH */
+.sbar{display:flex;gap:10px;margin-bottom:12px;align-items:center;}
+.sinp{flex:1;padding:8px 13px;border-radius:9px;border:1px solid #d1d5db;font-size:13px;font-family:inherit;outline:none;}
+.fbar{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap;}
+.fbtn{padding:6px 13px;border-radius:20px;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:12px;background:#f3f4f6;color:#374151;}
+.fbtn.on{background:#4f46e5;color:#fff;}
+
+/* PAYBACK */
+.pbbox{border-radius:14px;padding:16px 20px;margin-bottom:16px;border:1px solid;}
+.pbbar{background:rgba(0,0,0,.08);border-radius:20px;height:9px;overflow:hidden;margin:8px 0 4px;}
+.pbfill{height:100%;border-radius:20px;transition:width .6s;}
+
+/* ACTION CARDS */
+.acgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.accard{border-radius:14px;padding:16px 18px;text-align:center;}
+.acnum{font-size:32px;font-weight:900;}
+.aclbl{font-size:12px;font-weight:700;opacity:.8;margin-top:2px;}
+
+/* CHART */
+.chart{background:#fff;border-radius:13px;padding:18px;border:1px solid #e5e7eb;}
+.chart h3{font-size:13px;font-weight:700;color:#111827;margin-bottom:12px;}
+.bars{display:flex;align-items:flex-end;gap:8px;height:90px;}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.bc .bar{width:100%;background:#4f46e5;border-radius:4px 4px 0 0;min-height:4px;}
+.bc .bl{font-size:10px;color:#6b7280;}
+.bc .bv{font-size:9px;color:#9ca3af;}
+
+/* TWO COL */
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.card{background:#fff;border-radius:13px;padding:18px;border:1px solid #e5e7eb;}
+.card h3{font-size:13px;font-weight:700;color:#111827;margin-bottom:12px;}
+
+/* MODAL */
+.mover{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal{background:#fff;border-radius:18px;padding:26px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.mhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.mhdr h3{font-size:16px;font-weight:800;margin:0;}
+.mcls{border:none;background:#f3f4f6;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:15px;}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fgrid .full{grid-column:span 2;}
+.flbl{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;}
+.finp{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:13px;font-family:inherit;box-sizing:border-box;outline:none;}
+.fsel{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:13px;font-family:inherit;background:#fff;}
+
+/* PARCEIRO */
+.ph{background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:14px;padding:18px 22px;color:#fff;margin-bottom:16px;}
+.ph .pre{font-size:10px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.06em;}
+.ph h2{font-size:18px;font-weight:900;margin:3px 0 0;color:#fff;}
+.ph p{opacity:.8;font-size:12px;margin:4px 0 0;}
+
+/* STOCK ITEM */
+.si{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;margin-bottom:8px;flex-wrap:wrap;}
+.si-name{flex:1;min-width:130px;}
+.si-name .n{font-size:13px;font-weight:700;}
+.si-name .s{font-size:11px;color:#6b7280;}
+.si-pill{text-align:center;min-width:56px;border-radius:8px;padding:5px 8px;}
+.si-pill .pv{font-weight:900;font-size:18px;}
+.si-pill .pl{font-size:10px;color:#6b7280;}
+
+/* LOADING / ERROR */
 .loading{display:flex;flex-direction:column;align-items:center;padding:50px;gap:12px;}
 .spinner{width:30px;height:30px;border:3px solid #e5e7eb;border-top:3px solid #4f46e5;border-radius:50%;animation:spin .8s linear infinite;}
-.error-box{background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px 20px;margin:12px 0;}
-.error-box h4{color:#991b1b;margin-bottom:4px;}
-.error-box p{font-size:13px;color:#7f1d1d;margin-bottom:8px;}
-.error-box small{font-size:12px;color:#9ca3af;display:block;margin-bottom:10px;}
-.retry-btn{padding:6px 14px;border-radius:8px;border:none;background:#4f46e5;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px;}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;}
-.modal{background:#fff;border-radius:18px;padding:26px;max-width:600px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);}
-.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
-.modal-header h3{font-size:16px;font-weight:800;margin:0;}
-.close-btn{border:none;background:#f3f4f6;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:15px;}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
-.detail-box{border-radius:10px;padding:13px;}
-.detail-box .section-lbl{font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:8px;}
-.detail-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid;}
-.detail-row span:first-child{color:#6b7280;}
-.detail-row span:last-child{font-weight:600;}
-.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
-.metric{background:#f9fafb;border-radius:10px;padding:10px 12px;text-align:center;}
-.metric .lbl{font-size:10px;color:#9ca3af;font-weight:700;}
-.metric .val{font-size:17px;font-weight:900;margin-top:3px;}
-.alert-box{padding:10px 14px;border-radius:10px;font-size:13px;}
-.parceiro-header{background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:14px;padding:18px 22px;color:#fff;margin-bottom:16px;}
-.parceiro-header .pre{font-size:10px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.06em;}
-.parceiro-header h2{font-size:18px;font-weight:900;margin:3px 0 0;}
-.parceiro-header p{opacity:.8;font-size:12px;margin:4px 0 0;}
-.form-group{margin-bottom:12px;}
-.form-group label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;}
-.form-group input,.form-group select{width:100%;padding:8px 10px;border-radius:9px;border:1px solid #d1d5db;font-size:13px;font-family:inherit;box-sizing:border-box;}
-.confirm-btn{width:100%;padding:10px;border-radius:9px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;}
-.stock-item{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border-radius:9px;margin-bottom:7px;}
-.stock-item .name{font-size:13px;font-weight:700;}
-.stock-item .sub{font-size:11px;color:#6b7280;}
-.stock-item .qty{font-weight:900;font-size:20px;text-align:right;}
-.stock-item .qty-lbl{font-size:10px;color:#9ca3af;}
-.venda-reg{display:flex;justify-content:space-between;font-size:12px;padding:5px 9px;background:#f9fafb;border-radius:7px;margin-bottom:4px;}
-.pix-box{margin-top:13px;background:#f0fdf4;border-radius:11px;padding:12px 14px;font-size:12px;color:#374151;line-height:1.7;}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.form-grid .full{grid-column:span 2;}
-.status-select{padding:5px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:12px;font-family:inherit;font-weight:600;cursor:pointer;}
-.add-btn{padding:8px 18px;border-radius:9px;border:none;background:#4f46e5;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;}
-.edit-btn{padding:3px 8px;border-radius:6px;border:none;background:#eef2ff;color:#4f46e5;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;margin-right:4px;}
-.save-btn{padding:8px 20px;border-radius:9px;border:none;background:#16a34a;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;}
-.invest-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;}
-.invest-dot{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:7px;}
-.cat-row{margin-bottom:9px;}
-.cat-row .cat-header{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;}
-.cat-bar-track{background:#f3f4f6;border-radius:20px;height:5px;}
-.cat-bar-fill{height:100%;border-radius:20px;}
-.empty{padding:32px;text-align:center;color:#9ca3af;font-size:13px;}
-select.filter-sel{padding:7px 11px;border-radius:9px;border:1px solid #d1d5db;font-size:13px;font-family:inherit;background:#fff;}
+.errbox{background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px 20px;margin:12px 0;}
+.errbox h4{color:#991b1b;margin-bottom:4px;}
+.errbox p{font-size:13px;color:#7f1d1d;margin-bottom:8px;}
+.errbox small{font-size:12px;color:#9ca3af;display:block;margin-bottom:10px;}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;background:#18181b;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',-apple-system,sans-serif;width:100%;}
+.login-box{background:#27272a;border-radius:24px;padding:48px 52px;text-align:center;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.login-icon{width:64px;height:64px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:18px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;font-size:28px;}
+
+/* INVEST ROW */
+.irow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px;}
+.idot{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:7px;}
+.cbar{background:#f3f4f6;border-radius:20px;height:5px;margin-top:3px;}
+.cfill{height:100%;border-radius:20px;}
+
+/* TOTALS */
+.tots{font-size:13px;color:#6b7280;display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;}
+
+/* VENDA REG */
+.vreg{display:flex;justify-content:space-between;font-size:12px;padding:5px 9px;background:#f9fafb;border-radius:7px;margin-bottom:4px;}
+
+/* PIX BOX */
+.pixbox{margin-top:13px;background:#f0fdf4;border-radius:11px;padding:12px 14px;font-size:12px;color:#374151;line-height:1.7;}
+
+/* SKU GRID */
+.skugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:12px;}
+.skucard{background:#fff;border-radius:13px;border:1px solid #e5e7eb;overflow:hidden;}
+.skuhdr{padding:9px 13px;display:flex;justify-content:space-between;}
+.skuimg{height:110px;overflow:hidden;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:26px;}
+.skuimg img{width:100%;height:100%;object-fit:cover;}
+.skubody{padding:13px;}
+.skuname{font-weight:800;font-size:14px;color:#111827;margin-bottom:9px;}
+.skumeta{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:12px;}
+.skumi{border-radius:7px;padding:5px 7px;}
+.skumi .ml{color:#9ca3af;font-size:10px;}
+.skumi .mv{font-weight:700;}
+
+/* DETAIL GRID */
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.dbox{border-radius:10px;padding:13px;}
+.dsl{font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:8px;}
+.drow{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid;}
+.drow span:first-child{color:#6b7280;}
+.drow span:last-child{font-weight:600;}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.mitem{background:#f9fafb;border-radius:10px;padding:10px 12px;text-align:center;}
+.mitem .ml{font-size:10px;color:#9ca3af;font-weight:700;}
+.mitem .mv{font-size:17px;font-weight:900;margin-top:3px;}
+.alertbox{padding:10px 14px;border-radius:10px;font-size:13px;}
+
+/* CONSIG CARDS */
+.ccards{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px;}
+.ccard{background:#fff;border-radius:12px;padding:14px;border:1px solid #e5e7eb;text-align:center;}
+.ccard .cv{font-size:19px;font-weight:900;margin-top:2px;}
+.ccard .cl{font-size:11px;color:#6b7280;margin-top:2px;}
+
+/* PARCEIRO VIEW */
+.parc-layout{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
 </style>
 </head>
-<body>
-
-<!-- SIDEBAR -->
-<div class="sidebar">
-  <div class="logo">
-    <h1>Amalello</h1>
-    <p>Design · Impressão 3D</p>
-    <div class="sync-status" id="sync-status" style="display:none">🟢 Atualizado <span id="sync-time"></span></div>
-  </div>
-  <nav id="nav"></nav>
-  <div class="sidebar-footer">
-    <button class="sync-btn" onclick="syncAll()">🔄 Sincronizar planilhas</button>
-    <div class="admin-box">
-      <div class="lbl">Admin</div>
-      <div class="nm">Eduardo + Isabela</div>
-      <div class="info">🔗 Google Sheets (ao vivo)</div>
-    </div>
-  </div>
-</div>
-
-<!-- CONTENT -->
-<div class="content">
-  <div class="content-inner" id="app"></div>
-</div>
-
+<body id="body">
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const API_KEY  = "AIzaSyALhdkEqgIVaW9wbWRpyDnB0ZEV2BFyrds";
-const SHEET_ID = "1BxrGwTV535hTLv0ibZCOKYYLd7ge7bES_oy8yim7E6Y";
-const SKU_SHEET_ID = "1IUntgKC3UazaysvsylAAikdUxkfWV6lEGGfBNNdvIlo";
-const PARCEIROS = {
-  "Planet Kids Hair": "1-J32HhuPd0b3H8mKgkuB0APblydt8CwV0R82XECUoZU",
-  "Ateliê Telma":     "1ZvloqW_edvgSLBp-5065D_c7XFElB9NEeQJra8NXCOA",
-  "Bomboniere Lucia": "19ucXwNDz_x2yrrciinau6byMT-YLwmCfq6wnwr783N8",
-  "Loja Big Net":     "1qVLvSQ2OiRE7VAhlz8uVb44FIiekDuDn2Fjd1cOKNVA",
-  "Zancapel":         "1deStJmPAjBJhXoyh4qNtLXul_MCKbKAggVOzTEqRO6k",
+const CLIENT_ID = "967483167289-m1ctc3ti8o12btnn44h63c94or34570d.apps.googleusercontent.com";
+const API_KEY   = "AIzaSyALhdkEqgIVaW9wbWRpyDnB0ZEV2BFyrds";
+const SCOPES    = "https://www.googleapis.com/auth/spreadsheets";
+const SHEET_ID  = "1BxrGwTV535hTLv0ibZCOKYYLd7ge7bES_oy8yim7E6Y";
+const SKU_ID    = "1IUntgKC3UazaysvsylAAikdUxkfWV6lEGGfBNNdvIlo";
+const PARC_IDS  = {
+  "Planet Kids Hair":"1-J32HhuPd0b3H8mKgkuB0APblydt8CwV0R82XECUoZU",
+  "Ateliê Telma":"1ZvloqW_edvgSLBp-5065D_c7XFElB9NEeQJra8NXCOA",
+  "Bomboniere Lucia":"19ucXwNDz_x2yrrciinau6byMT-YLwmCfq6wnwr783N8",
+  "Loja Big Net":"1qVLvSQ2OiRE7VAhlz8uVb44FIiekDuDn2Fjd1cOKNVA",
+  "Zancapel":"1deStJmPAjBJhXoyh4qNtLXul_MCKbKAggVOzTEqRO6k"
 };
 const INVEST = {Equipamentos:6500,Instrumentos:251.03,Insumos:478.31,Filamentos:3803.06};
 const TOT_INV = Object.values(INVEST).reduce((a,b)=>a+b,0);
 const COR_TIPO = {Chaveiro:"#7c3aed",Caixa:"#d97706",Vaso:"#059669",Utilidade:"#2563eb",Fidget:"#db2777","Estátua":"#9333ea",Brinquedo:"#dc2626",Letreiro:"#0891b2",Outros:"#6b7280",Enfeite:"#16a34a"};
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
-// ─── ESTADO ───────────────────────────────────────────────────────────────────
-let STATE = {
-  pag:"dashboard", pedidos:[], skus:[], consig:[],
-  loadP:false, loadS:false, loadC:false,
-  erroP:null,  erroS:null,  erroC:null,
-  att:null, busca:"", parcSel:"Planet Kids Hair",
-  vendas:[], vendaForm:{impressao:"",qtd:1,data:today(),cliente:""},
-  detModal:null
-};
+// ─── AUTH ────────────────────────────────────────────────────────────────────
+let gToken = null, gapiOk = false, gsiOk = false, tokenClient = null;
+let userEmail = "", userName = "";
 
-function today(){return new Date().toISOString().slice(0,10);}
+function loadScript(src){ return new Promise(r=>{if(document.querySelector(`script[src="${src}"]`)){r();return;}const s=document.createElement("script");s.src=src;s.onload=r;document.head.appendChild(s);}); }
 
-// ─── CUSTEIO ─────────────────────────────────────────────────────────────────
-function calcCusto(g,h,chav=false){
-  const CFG=+g*0.08844, TD=CFG*0.1, CEE=+h*0.88, DEP=+h*1.0, ad=chav?0.3681:0;
-  return {CFG,TD,CEE,DEP,ad,tot:CFG+TD+CEE+DEP+ad};
+async function initAuth(){
+  await Promise.all([loadScript("https://apis.google.com/js/api.js"),loadScript("https://accounts.google.com/gsi/client")]);
+  await new Promise(r=>gapi.load("client",r));
+  await gapi.client.init({apiKey:API_KEY,discoveryDocs:["https://sheets.googleapis.com/$discovery/rest?version=v4"]});
+  gapiOk=true; gsiOk=true;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID, scope:SCOPES,
+    callback: resp=>{
+      if(resp.error){showLogin();return;}
+      gToken=resp.access_token;
+      gapi.client.setToken({access_token:gToken});
+      showApp();
+    }
+  });
+}
+
+function doLogin(){
+  if(!gapiOk){alert("Aguarde o carregamento...");return;}
+  tokenClient.requestAccessToken({prompt:"consent"});
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
-const R = n=>`R$\u00a0${(parseNum(n)||0).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}`;
-
-// Parser robusto para números brasileiros (vírgula como decimal)
-function parseNum(v){
+function N(v){
   if(v===null||v===undefined||v==="") return 0;
   if(typeof v==="number") return v;
   const s=String(v).trim().replace(/[R$\s]/g,"");
   if(!s) return 0;
-  // formato brasileiro: 1.234,56
-  if(s.includes(",")&&s.includes(".")){
-    return parseFloat(s.replace(/\./g,"").replace(",","."));
-  }
-  // só vírgula: 1234,56
-  if(s.includes(",")&&!s.includes(".")){
-    return parseFloat(s.replace(",","."));
-  }
+  if(s.includes(",")&&s.includes(".")) return parseFloat(s.replace(/\./g,"").replace(",","."));
+  if(s.includes(",")) return parseFloat(s.replace(",","."));
   return parseFloat(s)||0;
 }
-const P = n=>`${((+n||0)*100).toFixed(1)}%`;
-function serial2date(s){
+const R = v=>`R$\u00a0${N(v).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}`;
+const P = v=>`${(N(v)*100).toFixed(1)}%`;
+function today(){return new Date().toISOString().slice(0,10);}
+function fmtDate(s){
   if(!s||s==="") return "";
-  // already a date string like "2026-03-01" or "01/03/2026"
-  if(typeof s==="string"){
-    const sT=s.trim();
-    if(/^\d{4}-\d{2}-\d{2}/.test(sT)) return sT.slice(0,10);
-    // dd/mm/yyyy
-    if(/^\d{2}\/\d{2}\/\d{4}/.test(sT)){
-      const [d,m,y]=sT.split("/");
-      return `${y}-${m}-${d}`;
-    }
-    // "11-mar" or "11 mar" style
-    const mNames=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-    const mMatch=sT.toLowerCase().match(/(\d{1,2})[\s\-]([a-z]{3})/);
-    if(mMatch){
-      const day=mMatch[1].padStart(2,"0");
-      const mIdx=mNames.indexOf(mMatch[2]);
-      if(mIdx>=0) return `2026-${String(mIdx+1).padStart(2,"0")}-${day}`;
-    }
-  }
-  const n=+s; 
-  if(isNaN(n)||n<1) return "";
-  return new Date((n-25569)*86400*1000).toISOString().slice(0,10);
+  const st=String(s).trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(st)) return st.slice(0,10);
+  if(/^\d{2}\/\d{2}\/\d{4}/.test(st)){const[d,m,y]=st.split("/");return`${y}-${m}-${d}`;}
+  const mn=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  const mm=st.toLowerCase().match(/(\d{1,2})[\s\-\/]([a-záàãâéêíóôõúü]{3})/);
+  if(mm){const mi=mn.indexOf(mm[2].normalize("NFD").replace(/[\u0300-\u036f]/g,""));if(mi>=0)return`2026-${String(mi+1).padStart(2,"0")}-${mm[1].padStart(2,"0")}`;}
+  const n=+s; if(!isNaN(n)&&n>1000) return new Date((n-25569)*86400*1000).toISOString().slice(0,10);
+  return "";
 }
-function rows2obj(rows){
+function rows2obj(rows,forceIdx){
   if(!rows||rows.length<2) return [];
   const h=rows[0];
-  return rows.slice(1).filter(r=>r.some(c=>c!=="")).map(r=>{
+  return rows.slice(1).filter(r=>r&&r.some(c=>c!=="")).map(r=>{
     const o={};
-    h.forEach((k,j)=>{ if(k) o[k.trim()]=r[j]??""; });
-    // converte valores numéricos brasileiros
-    ["Valor","Valor Recebido","Preço unitário","Qtdd","Filamento (gramas)","Tempo (h)","Preço AD","Preço Sugerido","Quantidade","Quantidade Vendida","Estoque Atual","FilamentoUnitario","TempoemHora"].forEach(k=>{
-      if(o[k]!==undefined) o[k]=parseNum(o[k]);
-    });
-    // aliases para colunas com nomes que variam
-    const alias=(keys,fallback)=>{for(const k of keys){if(o[k]!==undefined&&o[k]!=="")return;}  o[keys[0]]=fallback||"";};
-    // Data
-    if(!o["Data Venda"]||o["Data Venda"]===""){
-      o["Data Venda"]=o["Data Ve nda"]||o["Data"]||o["data"]||"";
-    }
-    // Coluna L(11)=Qtdd, M(12)=Valor(total), N(13)=Valor Recebido, O(14)=Preço unitário
-    if((!o["Valor"]||o["Valor"]==="0"||o["Valor"]==="")&&r[12]){
-      o["Valor"]=r[12]; // coluna M = Valor total potencial
-    }
-    if(!o["Valor Recebido"]||o["Valor Recebido"]===""){
-      o["Valor Recebido"]=r[13]||"0"; // coluna N = o que já recebemos
-    }
-    // Preço unitário (coluna L+1 = index 11 é Qtdd, próximo é preço)
-    if(!o["Preço unitário"]||o["Preço unitário"]===""){
-      o["Preço unitário"]=r[11]||"0";
-    }
-    // Qtd (coluna L = index 11)
-    if(!o["Qtdd"]||o["Qtdd"]===""){
-      o["Qtdd"]=r[11]||"1";
-    }
-    // Filamento (coluna P = index 15)
-    if(!o["Filamento (gramas)"]||o["Filamento (gramas)"]===""){
-      o["Filamento (gramas)"]=r[15]||o["FilamentoUnitario"]||"0";
-    }
-    // Tempo (coluna Q = index 16)  
-    if(!o["Tempo (h)"]||o["Tempo (h)"]===""){
-      o["Tempo (h)"]=r[16]||o["TempoemHora"]||"0";
-    }
+    h.forEach((k,j)=>{if(k&&k.trim())o[k.trim()]=r[j]??""});
+    if(forceIdx){forceIdx.forEach(([key,idx])=>{if(!N(o[key])&&r[idx]!==undefined&&r[idx]!=="")o[key]=r[idx];});}
     return o;
   });
 }
-async function gsheet(id,range){
-  const url=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
-  const res=await fetch(url);
-  if(!res.ok){const e=await res.json();throw new Error(e?.error?.message||"Erro API Sheets");}
-  return (await res.json()).values||[];
+
+// ─── API ─────────────────────────────────────────────────────────────────────
+async function readSheet(id,range){
+  const res=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:id,range});
+  return res.result.values||[];
+}
+async function appendSheet(id,range,values){
+  await gapi.client.sheets.spreadsheets.values.append({spreadsheetId:id,range,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",resource:{values:[values]}});
 }
 
-// ─── CARREGAR DADOS ───────────────────────────────────────────────────────────
-async function loadPedidos(){
-  STATE.loadP=true; STATE.erroP=null; render();
-  try{STATE.pedidos=rows2obj(await gsheet(SHEET_ID,"Pedidos!A:AB"));STATE.att=new Date().toLocaleTimeString("pt-BR");}
-  catch(e){STATE.erroP=e.message;}
-  STATE.loadP=false; render();
-}
-async function loadSkus(){
-  STATE.loadS=true; STATE.erroS=null; render();
-  try{STATE.skus=rows2obj(await gsheet(SKU_SHEET_ID,"Controle de Skus!A:G"));}
-  catch(e){STATE.erroS=e.message;}
-  STATE.loadS=false; render();
-}
-async function loadConsig(){
-  STATE.loadC=true; STATE.erroC=null; render();
-  try{STATE.consig=rows2obj(await gsheet(SHEET_ID,"Consignado!A:M"));}
-  catch(e){STATE.erroC=e.message;}
-  STATE.loadC=false; render();
-}
-function syncAll(){loadPedidos();loadSkus();loadConsig();}
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let S = {
+  pag:"dashboard", pedidos:[], skus:[], consig:[],
+  lP:false,lS:false,lC:false, eP:null,eS:null,eC:null,
+  att:null, busca:"", parcSel:"Planet Kids Hair",
+  vendas:[], vendaForm:{impressao:"",qtd:1,data:today(),cliente:""},
+  tipoSel:"todos", consigSel:"todos",
+  editModal:null, detModal:null,
+  parceiros: {...PARC_IDS}
+};
 
-// ─── RENDER ───────────────────────────────────────────────────────────────────
+// ─── LOAD DATA ────────────────────────────────────────────────────────────────
+async function loadAll(){await Promise.all([loadPed(),loadSku(),loadCon()]);}
+async function loadPed(){
+  S.lP=true;S.eP=null;render();
+  try{
+    const rows=await readSheet(SHEET_ID,"Pedidos!A:N");
+    S.pedidos=rows2obj(rows,[["Valor",12],["Valor Recebido",13],["Preço unitário",11],["Qtdd",10]]);
+    S.att=new Date().toLocaleTimeString("pt-BR");
+  }catch(e){S.eP=e.message||String(e);}
+  S.lP=false;render();
+}
+async function loadSku(){
+  S.lS=true;S.eS=null;render();
+  try{const rows=await readSheet(SKU_ID,"Controle de Skus!A:G");S.skus=rows2obj(rows);}
+  catch(e){S.eS=e.message||String(e);}
+  S.lS=false;render();
+}
+async function loadCon(){
+  S.lC=true;S.eC=null;render();
+  try{const rows=await readSheet(SHEET_ID,"Consignado!A:M");S.consig=rows2obj(rows);}
+  catch(e){S.eC=e.message||String(e);}
+  S.lC=false;render();
+}
+
+// ─── CUSTEIO ─────────────────────────────────────────────────────────────────
+function calcCusto(g,h,isChav=false){
+  const CFG=N(g)*0.08844,TD=CFG*.1,CEE=N(h)*.88,DEP=N(h)*1,ad=isChav?.3681:0;
+  return{CFG,TD,CEE,DEP,ad,tot:CFG+TD+CEE+DEP+ad};
+}
+
+// ─── RENDER MAIN ─────────────────────────────────────────────────────────────
 function render(){
   renderNav();
-  renderSync();
-  const app=document.getElementById("app");
-  const pages={dashboard:renderDashboard,pedidos:()=>renderPedidos(null),produzir:()=>renderPedidos("produzir"),entregar:()=>renderPedidos("entregar"),cobrar:()=>renderPedidos("cobrar"),produtos:renderProdutos,consignacao:renderConsignacao,financeiro:renderFinanceiro,parceiro:renderParceiro,gerenciar:renderGerenciarParceiros};
-  app.innerHTML=(pages[STATE.pag]||renderDashboard)();
-  bindEvents();
+  if(S.att){document.getElementById("sync-lbl").style.display="block";document.getElementById("sync-time").textContent=S.att;}
+  const pages={dashboard:pgDash,pedidos:()=>pgPedidos(null),produzir:()=>pgPedidos("produzir"),entregar:()=>pgPedidos("entregar"),cobrar:()=>pgPedidos("cobrar"),produtos:pgProdutos,consignacao:pgConsig,financeiro:pgFin,parceiro:pgParceiro,gerenciar:pgGerenciar};
+  document.getElementById("app").innerHTML=(pages[S.pag]||pgDash)();
 }
-
-function renderSync(){
-  const el=document.getElementById("sync-status");
-  const t=document.getElementById("sync-time");
-  if(STATE.att){el.style.display="block";t.textContent=STATE.att;}
-}
-
+function go(p){S.pag=p;S.busca="";render();}
 function renderNav(){
-  const ped=STATE.pedidos;
-  const aP=ped.filter(p=>p.Realizado!=="Sim"&&p.Realizado!=="Lead"!==false).length;
-  const aE=ped.filter(p=>p.Realizado==="Sim"&&p.Entregue==="Não").length;
-  const aC=ped.filter(p=>(p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não").length;
+  const aP=S.pedidos.filter(p=>p.Realizado!=="Sim"&&p.Realizado!=="Lead"!==false).length;
+  const aE=S.pedidos.filter(p=>p.Realizado==="Sim"&&p.Entregue==="Não").length;
+  const aC=S.pedidos.filter(p=>(p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não").length;
   const nav=[
-    {id:"dashboard",label:"Dashboard",icon:"◉"},
-    {id:"pedidos",label:"Todos os Pedidos",icon:"📋"},
-    {id:"produzir",label:"Produzir",icon:"🖨️",badge:aP},
-    {id:"entregar",label:"Entregar",icon:"📦",badge:aE},
-    {id:"cobrar",label:"Cobrar",icon:"💸",badge:aC},
-    {id:"produtos",label:"Produtos / SKUs",icon:"🏷️"},
-    {id:"consignacao",label:"Consignação",icon:"🤝"},
-    {id:"financeiro",label:"Financeiro",icon:"📊"},
-    {id:"parceiro",label:"App Parceiro",icon:"🏪"},
-    {id:"gerenciar",label:"Gerenciar Parceiros",icon:"⚙️"},
+    {id:"dashboard",l:"Dashboard",i:"◉"},
+    {id:"pedidos",l:"Todos os Pedidos",i:"📋"},
+    {id:"produzir",l:"Produzir",i:"🖨️",b:aP},
+    {id:"entregar",l:"Entregar",i:"📦",b:aE},
+    {id:"cobrar",l:"Cobrar",i:"💸",b:aC},
+    {id:"produtos",l:"Produtos / SKUs",i:"🏷️"},
+    {id:"consignacao",l:"Consignação",i:"🤝"},
+    {id:"financeiro",l:"Financeiro",i:"📊"},
+    {id:"parceiro",l:"App Parceiro",i:"🏪"},
+    {id:"gerenciar",l:"Parceiros",i:"⚙️"},
   ];
-  document.getElementById("nav").innerHTML=nav.map(n=>`
-    <button class="nav-btn${STATE.pag===n.id?" active":""}" onclick="go('${n.id}')">
-      <span><span class="nav-icon">${n.icon}</span>${n.label}</span>
-      ${n.badge?`<span class="badge">${n.badge}</span>`:""}
-    </button>`).join("");
+  document.getElementById("nav").innerHTML=nav.map(n=>`<button class="nb${S.pag===n.id?" on":""}" onclick="go('${n.id}')"><span><span class="ni">${n.i}</span>${n.l}</span>${n.b?`<span class="bdg">${n.b}</span>`:""}</button>`).join("");
+  document.getElementById("user-info").textContent=userEmail||"Admin";
 }
 
-function go(pag){STATE.pag=pag;STATE.busca="";render();}
-
-// ─── COMPONENTES HTML ─────────────────────────────────────────────────────────
-function tag(t,c){return`<span class="tag tag-${c}">${t}</span>`;}
-function loading(msg){return`<div class="loading"><div class="spinner"></div><p style="color:#6b7280;font-size:13px">${msg||"Carregando..."}</p></div>`;}
-function erro(msg,fn){return`<div class="error-box"><h4>⚠️ Erro ao carregar dados</h4><p>${msg}</p><small>Certifique-se de que a planilha está compartilhada como "Qualquer pessoa com o link pode visualizar".</small><button class="retry-btn" onclick="${fn}()">Tentar novamente</button></div>`;}
-function kpi(label,val,sub,ac){return`<div class="kpi" style="border-left-color:${ac}"><div class="lbl">${label}</div><div class="val">${val}</div>${sub?`<div class="sub">${sub}</div>`:""}</div>`;}
+// ─── HELPERS HTML ─────────────────────────────────────────────────────────────
+function T(t,c){const cls={green:"tg",yellow:"ty",red:"tr",blue:"tb",purple:"tp",orange:"to",gray:"tgr"}[c]||"tgr";return`<span class="tag ${cls}">${t}</span>`;}
+function kpi(l,v,s,ac){return`<div class="kcard" style="border-left-color:${ac}"><div class="kl">${l}</div><div class="kv">${v}</div>${s?`<div class="ks">${s}</div>`:""}</div>`;}
+function load(m){return`<div class="loading"><div class="spinner"></div><p style="color:#6b7280;font-size:13px">${m||"Carregando..."}</p></div>`;}
+function err(m,fn){return`<div class="errbox"><h4>⚠️ Erro</h4><p>${m}</p><small>Verifique se a planilha está compartilhada corretamente.</small><button class="btn-pri" onclick="${fn}()" style="font-size:12px;padding:6px 14px">Tentar novamente</button></div>`;}
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
-function renderDashboard(){
-  if(STATE.loadP) return loading("Buscando pedidos na planilha...");
-  if(STATE.erroP) return erro(STATE.erroP,"loadPedidos");
-  const ped=STATE.pedidos;
+function pgDash(){
+  if(S.lP) return load("Carregando pedidos...");
+  if(S.eP) return err(S.eP,"loadPed");
+  const ped=S.pedidos;
+  // Excluir Brinde e Consignado dos totais
+  const semBC=p=>p.Pago!=="Brinde"&&p.Entregue!=="Consignado";
   const ok=ped.filter(p=>p.Realizado==="Sim"&&p.Entregue==="Sim"&&p.Pago==="Sim");
-  const vOK=ok.reduce((s,p)=>s+(parseNum(p["Valor Recebido"])||parseNum(p.Valor)||0),0);
-  const pot=ped.filter(p=>p.Realizado==="Sim"&&(p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não");
-  const vPot=pot.reduce((s,p)=>s+(parseNum(p.Valor)||0),0);
-  const saldo=vSaldoFinal-TOT_INV;
-  const pay=Math.min((vOK/TOT_INV)*100,100);
+  const vRecebido=ok.reduce((s,p)=>s+N(p["Valor Recebido"]),0);
+  // Valor total vendas = col M sem Brinde/Consig
+  const vTotal=ped.filter(semBC).reduce((s,p)=>s+N(p.Valor),0);
+  // Consignação vendida
+  const vConsig=S.consig.reduce((s,c)=>s+N(c["Preço AD"])*N(c["Quantidade Vendida"]),0);
+  const vSaldo=vTotal+vConsig;
+  const pot=ped.filter(p=>p.Realizado==="Sim"&&(p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não"&&p.Pago!=="Brinde");
+  const vPot=pot.reduce((s,p)=>s+N(p.Valor),0);
   const aP=ped.filter(p=>p.Realizado!=="Sim"&&p.Realizado!=="Lead"!==false).length;
   const aE=ped.filter(p=>p.Realizado==="Sim"&&p.Entregue==="Não").length;
   const aC=ped.filter(p=>(p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não").length;
-  const porMes={};
-  ped.forEach(p=>{
-    const d=serial2date(p["Data Venda"]||"");if(!d||d.length<7)return;
-    const m=new Date(d).getMonth();if(!porMes[m])porMes[m]=0;
-    if(p.Pago==="Sim")porMes[m]+=(+p.Valor||0);
-  });
-  const me=Object.entries(porMes);
+  const saldo=vSaldo-TOT_INV;
+  const pay=Math.min((vSaldo/TOT_INV)*100,100);
+  const pos=saldo>=0;
+  // Gráfico por mês
+  const pm={};
+  ped.forEach(p=>{const d=fmtDate(p["Data Venda"]);if(!d||d.length<7)return;const m=new Date(d).getMonth();if(!pm[m])pm[m]=0;if(p.Pago==="Sim")pm[m]+=N(p["Valor Recebido"]);});
+  const me=Object.entries(pm);
   const mx=Math.max(...me.map(([,v])=>v),1);
-  const posOp=saldo>=0;
   return`
     <h2>Dashboard</h2>
-    <p class="subtitle">${ped.length} pedidos carregados${STATE.att?` · Atualizado ${STATE.att}`:""}</p>
-    <div class="payback-box" style="background:${posOp?"#f0fdf4":"#fef2f2"};border-color:${posOp?"#bbf7d0":"#fecaca"}">
+    <p class="sub">${ped.length} pedidos · ${S.att?"Atualizado "+S.att:""}</p>
+    <div class="pbbox" style="background:${pos?"#f0fdf4":"#fef2f2"};border-color:${pos?"#bbf7d0":"#fecaca"}">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div style="font-weight:800;font-size:14px;color:${posOp?"#15803d":"#b91c1c"}">${posOp?"✅ Operação POSITIVA":"⚠️ Operação ainda NEGATIVA"}</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:2px">Investido: ${R(TOT_INV)} · Saldo Final: ${R(vSaldoFinal)} · Resultado: <strong style="color:${posOp?"#15803d":"#b91c1c"}">${R(saldo)}</strong></div>
+          <div style="font-weight:800;font-size:14px;color:${pos?"#15803d":"#b91c1c"}">${pos?"✅ Operação POSITIVA":"⚠️ Operação ainda NEGATIVA"}</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px">Investido: ${R(TOT_INV)} · Saldo Final: ${R(vSaldo)} · Resultado: <strong style="color:${pos?"#15803d":"#b91c1c"}">${R(saldo)}</strong></div>
         </div>
-        <div style="font-size:22px;font-weight:900;color:${posOp?"#15803d":"#b91c1c"}">${pay.toFixed(0)}%</div>
+        <div style="font-size:22px;font-weight:900;color:${pos?"#15803d":"#b91c1c"}">${pay.toFixed(0)}%</div>
       </div>
-      <div class="bar-track"><div class="bar-fill" style="width:${pay}%;background:${posOp?"#16a34a":"#ef4444"}"></div></div>
+      <div class="pbbar"><div class="pbfill" style="width:${pay}%;background:${pos?"#16a34a":"#ef4444"}"></div></div>
       <div style="font-size:11px;color:#9ca3af">Payback: ${pay.toFixed(1)}% do investimento recuperado</div>
     </div>
-    <div class="kpi-grid">
-      ${kpi("Valor Total de Vendas",R(vTotalVendas),"Col.M sem Brinde/Consig","#4f46e5")}
-      ${kpi("Já Recebido (OK)",R(vOK),`${ok.length} pedidos confirmados`,"#16a34a")}
-      ${kpi("A Receber (Check)",R(vPot),`${pot.length} pendentes`,"#d97706")}
+    <div class="kgrid">
+      ${kpi("Valor Total Vendas",R(vTotal),"Col.M sem Brinde/Consig","#4f46e5")}
+      ${kpi("Já Recebido (OK)",R(vRecebido),ok.length+" pedidos pagos","#16a34a")}
+      ${kpi("A Receber (Check)",R(vPot),pot.length+" pendentes","#d97706")}
       ${kpi("Consignação (AD)",R(vConsig),"Vendido nos parceiros","#7c3aed")}
-      ${kpi("Saldo Final",R(vSaldoFinal),"Vendas + Consignação","#0891b2")}
+      ${kpi("Saldo Final",R(vSaldo),"Vendas + Consignação","#0891b2")}
       ${kpi("Total Investido",R(TOT_INV),"Equip+Filam+Insumos","#ef4444")}
     </div>
-    <div class="action-grid">
-      <div class="action-card" style="background:#fef2f2"><div class="num" style="color:#dc2626">${aP}</div><div class="lbl" style="color:#dc2626">🖨️ Produzir</div></div>
-      <div class="action-card" style="background:#fffbeb"><div class="num" style="color:#d97706">${aE}</div><div class="lbl" style="color:#d97706">📦 Entregar</div></div>
-      <div class="action-card" style="background:#f5f3ff"><div class="num" style="color:#7c3aed">${aC}</div><div class="lbl" style="color:#7c3aed">💸 Cobrar</div></div>
+    <div class="acgrid">
+      <div class="accard" style="background:#fef2f2"><div class="acnum" style="color:#dc2626">${aP}</div><div class="aclbl" style="color:#dc2626">🖨️ Produzir</div></div>
+      <div class="accard" style="background:#fffbeb"><div class="acnum" style="color:#d97706">${aE}</div><div class="aclbl" style="color:#d97706">📦 Entregar</div></div>
+      <div class="accard" style="background:#f5f3ff"><div class="acnum" style="color:#7c3aed">${aC}</div><div class="aclbl" style="color:#7c3aed">💸 Cobrar</div></div>
     </div>
-    ${me.length?`<div class="chart-box"><h3>Faturamento confirmado por mês (pedidos OK)</h3><div class="bars">${me.map(([m,v])=>`<div class="bar-col"><div class="val">${R(v).replace("R$\u00a0","")}</div><div class="bar" style="height:${(v/mx)*78}px"></div><div class="lbl">${MESES[+m]}</div></div>`).join("")}</div></div>`:""}
+    ${me.length?`<div class="chart"><h3>Faturamento confirmado por mês</h3><div class="bars">${me.map(([m,v])=>`<div class="bc"><div class="bv">${R(v).replace("R$\u00a0","")}</div><div class="bar" style="height:${(v/mx)*78}px"></div><div class="bl">${MESES[+m]}</div></div>`).join("")}</div></div>`:""}
   `;
 }
 
 // ─── PEDIDOS ─────────────────────────────────────────────────────────────────
-function renderPedidos(filter){
-  if(STATE.loadP) return loading("Carregando pedidos...");
-  if(STATE.erroP) return erro(STATE.erroP,"loadPedidos");
-  const titulo={produzir:"🖨️ A Produzir",entregar:"📦 A Entregar",cobrar:"💸 A Cobrar"}[filter]||"📋 Todos os Pedidos";
-  const b=STATE.busca.toLowerCase();
-  const fil=STATE.pedidos.filter(p=>{
+function getFilPed(filter){
+  const b=S.busca.toLowerCase();
+  return S.pedidos.filter(p=>{
     const bm=!b||(p.Pessoa||"").toLowerCase().includes(b)||(p.Impressão||"").toLowerCase().includes(b);
     if(filter==="produzir") return bm&&p.Realizado!=="Sim";
     if(filter==="entregar") return bm&&p.Realizado==="Sim"&&p.Entregue==="Não";
     if(filter==="cobrar")   return bm&&(p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não";
     return bm;
   });
-  const totV=fil.reduce((s,p)=>s+(parseNum(p.Valor)||0),0);
-  const totR=fil.filter(p=>p.Pago==="Sim").reduce((s,p)=>s+(parseNum(p.Valor)||0),0);
+}
+function pgPedidos(filter){
+  if(S.lP) return load("Carregando pedidos...");
+  if(S.eP) return err(S.eP,"loadPed");
+  const titulo={produzir:"🖨️ A Produzir",entregar:"📦 A Entregar",cobrar:"💸 A Cobrar"}[filter]||"📋 Todos os Pedidos";
+  const fil=getFilPed(filter);
+  const totV=fil.reduce((s,p)=>s+N(p.Valor),0);
+  const totR=fil.reduce((s,p)=>s+N(p["Valor Recebido"]),0);
   function bt(p){
-    if(p.Realizado==="Lead") return tag("Lead","blue");
-    if(p.Realizado!=="Sim")  return tag("Produzir","red");
-    if(p.Entregue==="Não")   return tag("Entregar","yellow");
-    if(p.Pago==="Não")       return tag("Cobrar","purple");
-    if(p.Pago==="Brinde")    return tag("Brinde","orange");
-    return tag("OK ✓","green");
+    if(p.Realizado==="Lead") return T("Lead","blue");
+    if(p.Realizado!=="Sim")  return T("Produzir","red");
+    if(p.Entregue==="Não")   return T("Entregar","yellow");
+    if(p.Pago==="Não")       return T("Cobrar","purple");
+    if(p.Pago==="Brinde")    return T("Brinde","orange");
+    return T("OK ✓","green");
   }
   const rows=fil.map((p,i)=>{
-    const dt=serial2date(p["Data Venda"]||"").slice(5);
+    const dt=fmtDate(p["Data Venda"]||"").slice(5)||"—";
+    const rC=p.Realizado==="Sim"?"green":p.Realizado==="Lead"?"blue":"red";
+    const eC=p.Entregue==="Sim"?"green":p.Entregue==="Consignado"?"blue":"yellow";
+    const pgC=p.Pago==="Sim"?"green":p.Pago==="Brinde"?"orange":"yellow";
     return`<tr>
       <td style="color:#6b7280">${dt}</td>
       <td style="font-weight:600;color:#111827;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.Pessoa||""}</td>
-      <td style="max-width:135px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.Impressão||""}</td>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.Impressão||""}</td>
       <td style="color:#6b7280">${p.Familia||""}</td>
       <td style="color:#6b7280">${p.Cor||""}</td>
       <td style="text-align:center;font-weight:700">${p.Qtdd||1}</td>
-      <td style="font-weight:800;color:#4f46e5">${R(parseNum(p.Valor))}</td>
-      <td style="font-weight:700;color:${parseNum(p["Valor Recebido"])>0?"#16a34a":"#9ca3af"}">${R(parseNum(p["Valor Recebido"]))}</td>
-      <td>${tag(p.Realizado||"?",p.Realizado==="Sim"?"green":p.Realizado==="Lead"?"blue":"red")}</td>
-      <td>${tag(p.Entregue||"?",p.Entregue==="Sim"?"green":p.Entregue==="Consignado"?"blue":"yellow")}</td>
-      <td>${tag(p.Pago||"?",p.Pago==="Sim"?"green":p.Pago==="Brinde"?"orange":"yellow")}</td>
+      <td style="font-weight:800;color:#4f46e5">${R(p.Valor)}</td>
+      <td style="font-weight:700;color:${N(p["Valor Recebido"])>0?"#16a34a":"#9ca3af"}">${R(p["Valor Recebido"])}</td>
+      <td>${T(p.Realizado||"?",rC)}</td>
+      <td>${T(p.Entregue||"?",eC)}</td>
+      <td>${T(p.Pago||"?",pgC)}</td>
       <td>${bt(p)}</td>
-      <td style="white-space:nowrap"><button class="edit-btn" onclick="openEditPedido(${i},'${filter||''}')">✏️ Editar</button><button class="btn" onclick="openDet(${i},'${filter||''}')">Ver</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm" onclick="openEdit(${i},'${filter||""}')">✏️</button>
+        <button class="btn-view" onclick="openDet(${i},'${filter||""}')">Ver</button>
+      </td>
     </tr>`;
   }).join("");
   return`
     <h2>${titulo}</h2>
-    <p class="subtitle">${fil.length} pedido(s) · ${R(totV)}</p>
-    <div style="display:flex;gap:10px;margin-bottom:12px"><input class="search-box" style="margin:0;flex:1" placeholder="Buscar cliente ou produto..." value="${STATE.busca}" oninput="STATE.busca=this.value;render()"/><button class="add-btn" onclick="openNewPedido()">+ Novo Pedido</button></div>
-    <div class="table-wrap">
-      <div style="overflow-x:auto">
-        <table><thead><tr>${["Data","Cliente","Produto","Fam.","Cor","Qtd","Valor","Recebido","Realiz.","Entreg.","Pago","Status",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-        <tbody>${rows||`<tr><td colspan="12" class="empty">Nenhum pedido encontrado</td></tr>`}</tbody></table>
-      </div>
+    <p class="sub">${fil.length} pedido(s) · ${R(totV)}</p>
+    <div class="sbar">
+      <input class="sinp" placeholder="Buscar cliente ou produto..." value="${S.busca}" oninput="S.busca=this.value;render()"/>
+      <button class="btn-pri" onclick="openNew()">+ Novo Pedido</button>
     </div>
-    <div class="totals">
+    <div class="twrap"><div class="tscroll">
+      <table><thead><tr>${["Data","Cliente","Produto","Fam.","Cor","Qtd","Valor","Recebido","Realiz.","Entreg.","Pago","Status",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>${rows||`<tr><td colspan="13" style="padding:32px;text-align:center;color:#9ca3af">Nenhum pedido encontrado</td></tr>`}</tbody></table>
+    </div></div>
+    <div class="tots">
       <span>Total: <strong style="color:#4f46e5">${R(totV)}</strong></span>
       <span>Recebido: <strong style="color:#16a34a">${R(totR)}</strong></span>
       <span>Pendente: <strong style="color:#d97706">${R(totV-totR)}</strong></span>
@@ -477,166 +482,228 @@ function renderPedidos(filter){
   `;
 }
 
-function openDet(i, filter){
-  const fil=STATE.pedidos.filter(p=>{
-    if(filter==="produzir") return p.Realizado!=="Sim";
-    if(filter==="entregar") return p.Realizado==="Sim"&&p.Entregue==="Não";
-    if(filter==="cobrar")   return (p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não";
-    return true;
-  });
-  const b=STATE.busca.toLowerCase();
-  const filb=fil.filter(p=>!b||(p.Pessoa||"").toLowerCase().includes(b)||(p.Impressão||"").toLowerCase().includes(b));
-  STATE.detModal=filb[i];
-  showModal();
+// ─── EDITAR/NOVO PEDIDO ───────────────────────────────────────────────────────
+function openNew(){
+  S.editModal={mode:"new",ped:{"Data Venda":today(),Pessoa:"","Impressão":"",Familia:"",Cor:"",Realizado:"Não",Entregue:"Não",Pago:"Não",Qtdd:1,"Preço unitário":0,Valor:0,"Valor Recebido":0}};
+  showEditModal();
 }
-
-function showModal(){
-  const p=STATE.detModal; if(!p) return;
-  const isC=(p.Familia||"")==="Chaveiro";
-  const g=+(p["Filamento (gramas)"]||0);
-  const h=+(p["Tempo (h)"]||0);
-  const {CFG,TD,CEE,DEP,ad,tot}=calcCusto(g,h,isC);
-  const pr=+(p["Preço unitário"]||p.Valor||0);
-  const lu=pr-tot; const ma=pr>0?lu/pr:0; const fa=tot>0?pr/tot:0;
-  const ok=fa>=2;
-  const html=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+function openEdit(i,filter){
+  const fil=getFilPed(filter||"");
+  const b=S.busca.toLowerCase();
+  const filb=fil.filter(p=>!b||(p.Pessoa||"").toLowerCase().includes(b)||(p.Impressão||"").toLowerCase().includes(b));
+  const ped={...filb[i]};
+  const origIdx=S.pedidos.findIndex(p=>p===filb[i]);
+  S.editModal={mode:"edit",ped,origIdx};
+  showEditModal();
+}
+function showEditModal(){
+  const {mode,ped}=S.editModal;
+  const skuOpts=S.skus.map(s=>`<option value="${s.Impressão||""}"${ped["Impressão"]===s.Impressão?" selected":""}>${s.Impressão}</option>`).join("");
+  const famOpts=["Utilidade","Enfeite","Caixa","Chaveiro","Vaso","Estátua","Fidget","Brinquedo","Letreiro","Outros"].map(f=>`<option${ped.Familia===f?" selected":""}>${f}</option>`).join("");
+  const sel=(f,opts)=>opts.map(o=>`<option${ped[f]===o?" selected":""}>${o}</option>`).join("");
+  const sku=S.skus.find(s=>(s.Impressão||"")===ped["Impressão"]);
+  const g=N(sku?.FilamentoUnitario||0),h=N(sku?.TempoemHora||0);
+  const isC=(sku?.Tipo||"")==="Chaveiro";
+  const {tot}=calcCusto(g,h,isC);
+  const pr=N(ped["Preço unitário"]);
+  const lu=pr-tot,fa=tot>0?pr/tot:0;
+  const html=`<div class="mover" onclick="if(event.target===this)closeModal('edit')">
     <div class="modal">
-      <div class="modal-header"><h3>Detalhes · ${p.Impressão||""}</h3><button class="close-btn" onclick="closeModal()">✕</button></div>
-      <div class="detail-grid">
-        <div class="detail-box" style="background:#f9fafb">
-          <div class="section-lbl" style="color:#9ca3af">Pedido</div>
-          ${[["Cliente",p.Pessoa],["Data",serial2date(p["Data Venda"]||"")],["Produto",p.Impressão],["Cor",p.Cor],["Qtd",p.Qtdd||1],["Preço unit.",R(pr)],["Total",R(+(p.Valor||0))]].map(([k,v])=>`<div class="detail-row" style="border-color:#e5e7eb"><span>${k}</span><span>${v}</span></div>`).join("")}
-        </div>
-        <div class="detail-box" style="background:#f0fdf4">
-          <div class="section-lbl" style="color:#065f46">Custo de Produção</div>
-          ${[["Filamento (CFG)",R(CFG)],["Desperdício 10%",R(TD)],["Energia (CEE)",R(CEE)],["Depreciação",R(DEP)],["Adicional",R(ad)]].map(([k,v])=>`<div class="detail-row" style="border-color:#d1fae5"><span>${k}</span><span>${v}</span></div>`).join("")}
-          <div class="detail-row" style="border-color:transparent;padding-top:7px;font-weight:900;font-size:13px"><span>Custo Total</span><span style="color:#dc2626">${R(tot)}</span></div>
-        </div>
+      <div class="mhdr"><h3>${mode==="new"?"Novo Pedido":"Editar Pedido"}</h3><button class="mcls" onclick="closeModal('edit')">✕</button></div>
+      <div class="fgrid">
+        <div><label class="flbl">Data *</label><input class="finp" type="date" value="${ped["Data Venda"]||""}" onchange="S.editModal.ped['Data Venda']=this.value"/></div>
+        <div><label class="flbl">Cliente *</label><input class="finp" type="text" value="${ped.Pessoa||""}" oninput="S.editModal.ped.Pessoa=this.value"/></div>
+        <div class="full"><label class="flbl">Produto *</label>
+          <select class="fsel" onchange="S.editModal.ped['Impressão']=this.value;showEditModal()"><option value="">Selecione...</option>${skuOpts}</select></div>
+        <div><label class="flbl">Família</label><select class="fsel" onchange="S.editModal.ped.Familia=this.value"><option value="">—</option>${famOpts}</select></div>
+        <div><label class="flbl">Cor</label><input class="finp" type="text" value="${ped.Cor||""}" oninput="S.editModal.ped.Cor=this.value"/></div>
+        <div><label class="flbl">Quantidade</label><input class="finp" type="number" min="1" value="${ped.Qtdd||1}" onchange="S.editModal.ped.Qtdd=+this.value;S.editModal.ped.Valor=(+this.value)*N(S.editModal.ped['Preço unitário']);showEditModal()"/></div>
+        <div><label class="flbl">Preço Unitário (R$)</label><input class="finp" type="number" min="0" step="0.01" value="${pr||""}" onchange="S.editModal.ped['Preço unitário']=+this.value;S.editModal.ped.Valor=(+this.value)*N(S.editModal.ped.Qtdd||1);showEditModal()"/></div>
+        <div><label class="flbl">Realizado</label><select class="fsel" onchange="S.editModal.ped.Realizado=this.value"><option>—</option>${sel("Realizado",["Sim","Não","Lead"])}</select></div>
+        <div><label class="flbl">Entregue</label><select class="fsel" onchange="S.editModal.ped.Entregue=this.value"><option>—</option>${sel("Entregue",["Sim","Não","Consignado"])}</select></div>
+        <div><label class="flbl">Pago</label><select class="fsel" onchange="S.editModal.ped.Pago=this.value;if(this.value==='Sim')S.editModal.ped['Valor Recebido']=S.editModal.ped.Valor;else S.editModal.ped['Valor Recebido']=0;showEditModal()"><option>—</option>${sel("Pago",["Sim","Não","Brinde"])}</select></div>
+        <div><label class="flbl">Valor Recebido (R$)</label><input class="finp" type="number" min="0" step="0.01" value="${N(ped["Valor Recebido"])||""}" onchange="S.editModal.ped['Valor Recebido']=+this.value"/></div>
       </div>
-      <div class="metric-grid">
-        <div class="metric"><div class="lbl">Lucro/peça</div><div class="val" style="color:${lu>0?"#16a34a":"#ef4444"}">${R(lu)}</div></div>
-        <div class="metric"><div class="lbl">Margem %</div><div class="val" style="color:#4f46e5">${P(ma)}</div></div>
-        <div class="metric"><div class="lbl">Markup</div><div class="val" style="color:#d97706">×${fa.toFixed(2)}</div></div>
-      </div>
-      <div class="alert-box" style="background:${ok?"#f0fdf4":"#fef2f2"};color:${ok?"#15803d":"#b91c1c"}">
-        ${ok?`✅ Markup ×${fa.toFixed(2)} — saudável (≥2×)`:`⚠️ Markup ×${fa.toFixed(2)} — abaixo do recomendado. Preço sugerido: ${R(tot*2.5)}`}
+      ${tot>0?`<div style="margin-top:14px;background:#f0fdf4;border-radius:10px;padding:11px 16px;font-size:13px;display:flex;gap:18px;flex-wrap:wrap">
+        <span>Custo: <strong style="color:#dc2626">${R(tot)}</strong></span>
+        <span>Lucro: <strong style="color:${lu>0?"#16a34a":"#ef4444"}">${R(lu)}</strong></span>
+        <span>Markup: <strong>×${fa.toFixed(2)}</strong></span>
+        <span>Valor pedido: <strong style="color:#4f46e5">${R(N(ped.Valor))}</strong></span>
+      </div>`:""}
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn-sec" onclick="closeModal('edit')">Cancelar</button>
+        <button class="btn-grn" onclick="salvarPedido()">💾 Salvar no Google Sheets</button>
       </div>
     </div>
   </div>`;
-  let overlay=document.getElementById("modal-container");
-  if(!overlay){overlay=document.createElement("div");overlay.id="modal-container";document.body.appendChild(overlay);}
-  overlay.innerHTML=html;
+  setModal("edit-modal",html);
 }
-function closeModal(){const el=document.getElementById("modal-container");if(el)el.innerHTML="";}
+async function salvarPedido(){
+  const {mode,ped,origIdx}=S.editModal;
+  if(!ped.Pessoa||!ped["Impressão"]){alert("Preencha cliente e produto.");return;}
+  const qtd=N(ped.Qtdd)||1,pr=N(ped["Preço unitário"])||0;
+  ped.Valor=qtd*pr;
+  if(ped.Pago==="Sim"&&!N(ped["Valor Recebido"])) ped["Valor Recebido"]=ped.Valor;
+  const check=(ped.Realizado==="Sim"&&ped.Entregue==="Sim"&&ped.Pago==="Sim")?"OK":"Check";
+  const row=[ped["Data Venda"],ped.Pessoa,ped["Impressão"],ped.Familia,ped.Cor,ped.Realizado,ped.Entregue,ped.Pago,check,"",qtd,pr,ped.Valor,ped["Valor Recebido"]];
+  try{
+    const btn=document.querySelector(".btn-grn");
+    if(btn){btn.textContent="Salvando...";btn.disabled=true;}
+    await appendSheet(SHEET_ID,"Pedidos!A:N",row);
+    if(mode==="new") S.pedidos.push(ped);
+    else S.pedidos[origIdx]=ped;
+    closeModal("edit");
+    await loadPed();
+    alert("✅ Pedido salvo na planilha!");
+  }catch(e){alert("Erro ao salvar: "+e.message);}
+}
+
+// ─── DETALHE PEDIDO ───────────────────────────────────────────────────────────
+function openDet(i,filter){
+  const fil=getFilPed(filter||"");
+  const b=S.busca.toLowerCase();
+  const filb=fil.filter(p=>!b||(p.Pessoa||"").toLowerCase().includes(b)||(p.Impressão||"").toLowerCase().includes(b));
+  S.detModal=filb[i];
+  showDetModal();
+}
+function showDetModal(){
+  const p=S.detModal;if(!p)return;
+  const isC=(p.Familia||"")==="Chaveiro";
+  const g=N(p["Filamento (gramas)"]||0),h=N(p["Tempo (h)"]||0);
+  const {CFG,TD,CEE,DEP,ad,tot}=calcCusto(g,h,isC);
+  const pr=N(p["Preço unitário"]||p.Valor||0);
+  const lu=pr-tot,ma=pr>0?lu/pr:0,fa=tot>0?pr/tot:0;
+  const html=`<div class="mover" onclick="if(event.target===this)closeModal('det')">
+    <div class="modal">
+      <div class="mhdr"><h3>${p.Impressão||"Pedido"}</h3><button class="mcls" onclick="closeModal('det')">✕</button></div>
+      <div class="dgrid">
+        <div class="dbox" style="background:#f9fafb">
+          <div class="dsl" style="color:#9ca3af">Pedido</div>
+          ${[["Cliente",p.Pessoa],["Data",fmtDate(p["Data Venda"]||"").slice(5)],["Produto",p.Impressão],["Cor",p.Cor],["Qtd",p.Qtdd||1],["Preço unit.",R(pr)],["Total",R(N(p.Valor))]].map(([k,v])=>`<div class="drow" style="border-color:#e5e7eb"><span>${k}</span><span>${v||"—"}</span></div>`).join("")}
+        </div>
+        <div class="dbox" style="background:#f0fdf4">
+          <div class="dsl" style="color:#065f46">Custo de Produção</div>
+          ${[["Filamento (CFG)",R(CFG)],["Desperdício 10%",R(TD)],["Energia (CEE)",R(CEE)],["Depreciação",R(DEP)],["Adicional",R(ad)]].map(([k,v])=>`<div class="drow" style="border-color:#d1fae5"><span>${k}</span><span>${v}</span></div>`).join("")}
+          <div class="drow" style="border-color:transparent;padding-top:7px;font-weight:900;font-size:13px"><span>Custo Total</span><span style="color:#dc2626">${R(tot)}</span></div>
+        </div>
+      </div>
+      <div class="mgrid">
+        <div class="mitem"><div class="ml">Lucro/peça</div><div class="mv" style="color:${lu>0?"#16a34a":"#ef4444"}">${R(lu)}</div></div>
+        <div class="mitem"><div class="ml">Margem %</div><div class="mv" style="color:#4f46e5">${P(ma)}</div></div>
+        <div class="mitem"><div class="ml">Markup</div><div class="mv" style="color:#d97706">×${fa.toFixed(2)}</div></div>
+      </div>
+      <div class="alertbox" style="background:${fa>=2?"#f0fdf4":"#fef2f2"};color:${fa>=2?"#15803d":"#b91c1c"}">
+        ${fa>=2?`✅ Markup ×${fa.toFixed(2)} — saudável (≥2×)`:`⚠️ Markup ×${fa.toFixed(2)} — abaixo do recomendado. Sugestão: ${R(tot*2.5)}`}
+      </div>
+    </div>
+  </div>`;
+  setModal("det-modal",html);
+}
 
 // ─── PRODUTOS ─────────────────────────────────────────────────────────────────
-function renderProdutos(){
-  if(STATE.loadS) return loading("Carregando SKUs...");
-  if(STATE.erroS) return erro(STATE.erroS,"loadSkus");
-  const b=STATE.busca.toLowerCase();
-  const tipoSel=STATE._tipoSel||"todos";
-  const tipos=[...new Set(STATE.skus.map(s=>s.Tipo||""))].filter(Boolean).sort();
-  const fil=STATE.skus.filter(s=>{
-    const bm=!b||(s.Impressão||"").toLowerCase().includes(b);
-    const tm=tipoSel==="todos"||(s.Tipo||"")===tipoSel;
-    return bm&&tm;
-  });
+function pgProdutos(){
+  if(S.lS) return load("Carregando SKUs...");
+  if(S.eS) return err(S.eS,"loadSku");
+  const b=S.busca.toLowerCase();
+  const ts=S.tipoSel||"todos";
+  const tipos=[...new Set(S.skus.map(s=>s.Tipo||""))].filter(Boolean).sort();
+  const fil=S.skus.filter(s=>(!b||(s.Impressão||"").toLowerCase().includes(b))&&(ts==="todos"||(s.Tipo||"")===ts));
   const cards=fil.map(s=>{
-    const nome=s.Impressão||""; const tp=s.Tipo||"Outros";
-    const g=+(s.FilamentoUnitario||0); const h=+(s.TempoemHora||0);
+    const tp=s.Tipo||"Outros",g=N(s.FilamentoUnitario||0),h=N(s.TempoemHora||0);
     const {tot}=calcCusto(g,h,tp==="Chaveiro");
     const tc=COR_TIPO[tp]||"#6b7280";
-    const foto=s.Foto||"";
-    const fid=foto.match(/[-\w]{25,}/)?.[0];
-    const imgUrl=fid?`https://drive.google.com/thumbnail?id=${fid}&sz=w240`:"";
-    return`<div class="sku-card">
-      <div class="sku-header" style="background:${tc}"><span>${tp}</span><span>${(s.Codigo||"").slice(0,8)}</span></div>
-      <div class="sku-img">${imgUrl?`<img src="${imgUrl}" alt="${nome}" onerror="this.parentElement.innerHTML='🖨️'">`:"🖨️"}</div>
-      <div class="sku-body">
-        <div class="sku-name">${nome}</div>
-        <div class="sku-meta">
-          <div class="sku-meta-item" style="background:#f9fafb"><div class="lbl">Filamento</div><div class="val">${g}g</div></div>
-          <div class="sku-meta-item" style="background:#f9fafb"><div class="lbl">Tempo</div><div class="val">${h}h</div></div>
-          <div class="sku-meta-item" style="background:#fef2f2"><div class="lbl">Custo</div><div class="val" style="color:#dc2626">${R(tot)}</div></div>
-          <div class="sku-meta-item" style="background:#f5f3ff"><div class="lbl">Venda (2.5×)</div><div class="val" style="color:#7c3aed">${R(tot*2.5)}</div></div>
+    const foto=s.Foto||"",fid=foto.match(/[-\w]{25,}/)?.[0];
+    const img=fid?`<div class="skuimg"><img src="https://drive.google.com/thumbnail?id=${fid}&sz=w240" onerror="this.parentElement.innerHTML='🖨️'"/></div>`:`<div class="skuimg">🖨️</div>`;
+    return`<div class="skucard">
+      <div class="skuhdr" style="background:${tc}"><span style="color:#fff;font-weight:800;font-size:12px">${tp}</span><span style="color:rgba(255,255,255,.55);font-size:10px">${(s.Codigo||"").slice(0,8)}</span></div>
+      ${img}
+      <div class="skubody">
+        <div class="skuname">${s.Impressão||""}</div>
+        <div class="skumeta">
+          <div class="skumi" style="background:#f9fafb"><div class="ml">Filamento</div><div class="mv">${g}g</div></div>
+          <div class="skumi" style="background:#f9fafb"><div class="ml">Tempo</div><div class="mv">${h}h</div></div>
+          <div class="skumi" style="background:#fef2f2"><div class="ml">Custo</div><div class="mv" style="color:#dc2626">${R(tot)}</div></div>
+          <div class="skumi" style="background:#f5f3ff"><div class="ml">Venda (2.5×)</div><div class="mv" style="color:#7c3aed">${R(tot*2.5)}</div></div>
         </div>
-        <div class="sku-consig"><span style="color:#6b7280">Consignação (1.8×)</span><span style="font-weight:700;color:#15803d">${R(tot*1.8)}</span></div>
-        ${s["Link Maker "]?`<a href="${s["Link Maker "]}" target="_blank" class="sku-link">MakerWorld ↗</a>`:""}
+        <div style="margin-top:7px;background:#f0fdf4;border-radius:7px;padding:5px 9px;display:flex;justify-content:space-between;font-size:11px">
+          <span style="color:#6b7280">Consignação (1.8×)</span><span style="font-weight:700;color:#15803d">${R(tot*1.8)}</span>
+        </div>
+        ${s["Link Maker "]?`<a href="${s["Link Maker "]}" target="_blank" style="display:block;margin-top:7px;font-size:11px;color:#4f46e5;text-decoration:none;text-align:center;background:#eef2ff;padding:4px;border-radius:6px">MakerWorld ↗</a>`:""}
       </div>
     </div>`;
   }).join("");
   return`
     <h2>🏷️ Produtos / SKUs</h2>
-    <p class="subtitle">${STATE.skus.length} produtos · cadastro via AppSheet → Google Sheets</p>
-    <div class="filter-bar">
-      <input class="search-box" style="margin:0;flex:1;min-width:160px" placeholder="Buscar produto..." value="${STATE.busca}" oninput="STATE.busca=this.value;render()"/>
-      <select class="filter-sel" onchange="STATE._tipoSel=this.value;render()">
+    <p class="sub">${S.skus.length} produtos · cadastro via AppSheet</p>
+    <div class="sbar">
+      <input class="sinp" placeholder="Buscar produto..." value="${S.busca}" oninput="S.busca=this.value;render()"/>
+      <select style="padding:8px 11px;border-radius:9px;border:1px solid #d1d5db;font-size:13px;font-family:inherit;background:#fff" onchange="S.tipoSel=this.value;render()">
         <option value="todos">Todos os tipos</option>
-        ${tipos.map(t=>`<option value="${t}"${tipoSel===t?" selected":""}>${t}</option>`).join("")}
+        ${tipos.map(t=>`<option${ts===t?" selected":""}>${t}</option>`).join("")}
       </select>
     </div>
-    <div class="sku-grid">${cards||`<div class="empty">Nenhum produto encontrado</div>`}</div>
+    <div class="skugrid">${cards||`<div style="padding:32px;text-align:center;color:#9ca3af">Nenhum produto encontrado</div>`}</div>
   `;
 }
 
 // ─── FINANCEIRO ───────────────────────────────────────────────────────────────
-function renderFinanceiro(){
-  if(STATE.loadP) return loading("Carregando...");
-  if(STATE.erroP) return erro(STATE.erroP,"loadPedidos");
-  const ok=STATE.pedidos.filter(p=>p.Realizado==="Sim"&&p.Entregue==="Sim"&&p.Pago==="Sim");
-  const vOK=ok.reduce((s,p)=>s+(parseNum(p.Valor)||0),0);
-  const saldo=vSaldoFinal-TOT_INV;
+function pgFin(){
+  if(S.lP) return load("Carregando...");
+  if(S.eP) return err(S.eP,"loadPed");
+  const ok=S.pedidos.filter(p=>p.Realizado==="Sim"&&p.Entregue==="Sim"&&p.Pago==="Sim");
+  const vOK=ok.reduce((s,p)=>s+N(p["Valor Recebido"]),0);
+  const saldo=vOK-TOT_INV;
   const pf={};
-  ok.forEach(p=>{pf[p.Familia]=(pf[p.Familia]||0)+(+p.Valor||0);});
-  const cats=Object.entries(pf).sort((a,b)=>b[1]-a[1]);
+  ok.forEach(p=>{pf[p.Familia]=(pf[p.Familia]||0)+N(p["Valor Recebido"]);});
   return`
     <h2>📊 Financeiro</h2>
-    <p class="subtitle">Investimentos, receita e resultado</p>
-    <div class="kpi-grid">
+    <p class="sub">Investimentos, receita e resultado</p>
+    <div class="kgrid">
       ${kpi("Total Investido",R(TOT_INV),null,"#ef4444")}
-      ${kpi("Receita Confirmada",R(vOK),null,"#4f46e5")}
-      ${kpi("Saldo",R(saldo),saldo<0?"A recuperar":"Lucro líquido",saldo<0?"#ef4444":"#16a34a")}
+      ${kpi("Receita Confirmada",R(vOK),"Pedidos OK pagos","#4f46e5")}
+      ${kpi("Saldo",R(saldo),saldo<0?"A recuperar":"Lucro","#16a34a")}
       ${kpi("Payback",`${Math.min((vOK/TOT_INV)*100,100).toFixed(0)}%`,null,"#d97706")}
     </div>
-    <div class="two-col">
+    <div class="twocol">
       <div class="card">
         <h3>Detalhamento do Investimento</h3>
         ${Object.entries(INVEST).map(([k,v])=>{
           const c={Equipamentos:"#ef4444",Instrumentos:"#f59e0b",Insumos:"#10b981",Filamentos:"#4f46e5"}[k];
-          return`<div class="invest-row"><div><span class="invest-dot" style="background:${c}"></span>${k}</div><strong>${R(v)}</strong></div>`;
+          return`<div class="irow"><div><span class="idot" style="background:${c}"></span>${k}</div><strong>${R(v)}</strong></div>`;
         }).join("")}
-        <div class="invest-row" style="border:none;padding-top:9px;font-weight:900;font-size:13px"><span>Total</span><span style="color:#ef4444">${R(TOT_INV)}</span></div>
+        <div class="irow" style="border:none;font-weight:900;font-size:13px"><span>Total</span><span style="color:#ef4444">${R(TOT_INV)}</span></div>
       </div>
       <div class="card">
         <h3>Receita por Categoria (OK)</h3>
-        ${cats.map(([f,v])=>`<div class="cat-row">
-          <div class="cat-header"><span>${f}</span><span style="font-weight:700;color:${COR_TIPO[f]||"#4f46e5"}">${R(v)}</span></div>
-          <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${(v/vOK)*100}%;background:${COR_TIPO[f]||"#4f46e5"}"></div></div>
+        ${Object.entries(pf).sort((a,b)=>b[1]-a[1]).map(([f,v])=>`<div style="margin-bottom:9px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>${f}</span><span style="font-weight:700;color:${COR_TIPO[f]||"#4f46e5"}">${R(v)}</span></div>
+          <div class="cbar"><div class="cfill" style="width:${(v/vOK)*100}%;background:${COR_TIPO[f]||"#4f46e5"}"></div></div>
         </div>`).join("")}
       </div>
     </div>
   `;
 }
 
-// ─── CONSIGNAÇÃO ─────────────────────────────────────────────────────────────
-function renderConsignacao(){
-  if(STATE.loadC) return loading("Carregando consignação...");
-  if(STATE.erroC) return erro(STATE.erroC,"loadConsig");
-  const sel=STATE._consigSel||"todos";
-  const parc=[...new Set(STATE.consig.map(c=>c.Local||""))].filter(Boolean);
-  const fil=sel==="todos"?STATE.consig:STATE.consig.filter(c=>(c.Local||"")===sel);
-  const totAD=fil.reduce((s,c)=>s+parseNum(c["Preço AD"])*parseNum(c.Quantidade),0);
-  const totV=fil.reduce((s,c)=>s+parseNum(c["Preço AD"])*parseNum(c["Quantidade Vendida"]),0);
-  const totE=fil.reduce((s,c)=>s+parseNum(c["Estoque Atual"]),0);
-  const rows=fil.map(c=>{
-    const est=+c["Estoque Atual"]||0; const vend=parseNum(c["Quantidade Vendida"]);
-    const st=est===0?tag("REPOR","red"):est<=2?tag("Baixo","yellow"):tag("OK","green");
+// ─── CONSIGNAÇÃO ──────────────────────────────────────────────────────────────
+function pgConsig(){
+  if(S.lC) return load("Carregando consignação...");
+  if(S.eC) return err(S.eC,"loadCon");
+  const sel=S.consigSel||"todos";
+  const parc=[...new Set(S.consig.map(c=>c.Local||""))].filter(Boolean);
+  const fil=sel==="todos"?S.consig:S.consig.filter(c=>(c.Local||"")===sel);
+  const totAD=fil.reduce((s,c)=>s+N(c["Preço AD"])*N(c.Quantidade),0);
+  const totV=fil.reduce((s,c)=>s+N(c["Preço AD"])*N(c["Quantidade Vendida"]),0);
+  const totE=fil.reduce((s,c)=>s+N(c["Estoque Atual"]),0);
+  const rows=fil.map((c,i)=>{
+    const est=N(c["Estoque Atual"]),vend=N(c["Quantidade Vendida"]);
+    const st=est===0?T("REPOR","red"):est<=2?T("Baixo","yellow"):T("OK","green");
     return`<tr>
       <td style="font-weight:600">${c.Local||""}</td>
-      <td>${c.Impressão||""}</td><td style="color:#6b7280">${c.Cor||""}</td>
+      <td>${c.Impressão||""}</td>
+      <td style="color:#6b7280">${c.Cor||""}</td>
       <td style="text-align:center">${c.Quantidade||""}</td>
-      <td style="font-weight:600">${R(parseNum(c["Preço AD"]))}</td>
-      <td style="color:#16a34a;font-weight:600">${R(parseNum(c["Preço Sugerido"]))}</td>
+      <td style="font-weight:600">${R(c["Preço AD"]||0)}</td>
+      <td style="color:#d97706;font-weight:600">${R(c["Preço Sugerido"]||0)}</td>
       <td style="text-align:center;font-weight:800;color:${vend>0?"#16a34a":"#9ca3af"}">${vend}</td>
       <td style="text-align:center;font-weight:800;color:${est<=1?"#d97706":"#374151"}">${est}</td>
       <td>${st}</td>
@@ -644,377 +711,205 @@ function renderConsignacao(){
   }).join("");
   return`
     <h2>🤝 Consignação</h2>
-    <p class="subtitle">${parc.length} parceiros · Fechamento dia 30</p>
-    <div class="filter-bar">
-      <button class="filter-btn${sel==="todos"?" active":""}" onclick="STATE._consigSel='todos';render()">Todos</button>
-      ${parc.map(p=>`<button class="filter-btn${sel===p?" active":""}" onclick="STATE._consigSel='${p}';render()">${p}</button>`).join("")}
+    <p class="sub">${parc.length} parceiros · Fechamento dia 30</p>
+    <div class="fbar">
+      ${["todos",...parc].map(p=>`<button class="fbtn${sel===p?" on":""}" onclick="S.consigSel='${p}';render()">${p==="todos"?"Todos":p}</button>`).join("")}
     </div>
-    <div class="kpi-grid">
-      ${kpi("Em consignação (AD)",R(totAD),null,"#4f46e5")}
-      ${kpi("Já vendido",R(totV),null,"#16a34a")}
-      ${kpi("Estoque total",`${totE} un.`,null,"#d97706")}
+    <div class="ccards">
+      ${[["Em consignação (AD)",R(totAD),"#4f46e5"],["Já vendido",R(totV),"#16a34a"],["Estoque total",totE+" un.","#d97706"]].map(([l,v,c])=>`<div class="ccard" style="border-top:3px solid ${c}"><div class="kl">${l}</div><div class="cv" style="color:${c}">${v}</div></div>`).join("")}
     </div>
-    <div class="table-wrap">
-      <div style="overflow-x:auto">
-        <table><thead><tr>${["Parceiro","Produto","Cor","Qtd","P.AD","P.Sug.","Vendido","Estoque","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-        <tbody>${rows||`<tr><td colspan="9" class="empty">Sem dados</td></tr>`}</tbody></table>
-      </div>
-    </div>
+    <div class="twrap"><div class="tscroll">
+      <table><thead><tr>${["Parceiro","Produto","Cor","Qtd","P.AD","P.Sug.","Vendido","Estoque","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>${rows||`<tr><td colspan="9" style="padding:28px;text-align:center;color:#9ca3af">Sem dados</td></tr>`}</tbody></table>
+    </div></div>
   `;
 }
 
 // ─── APP PARCEIRO ─────────────────────────────────────────────────────────────
-function renderParceiro(){
-  const parc=STATE.parcSel;
-  const est=STATE.consig.filter(c=>(c.Local||"")===parc&&parseNum(c["Estoque Atual"])>0);
-  const f=STATE.vendaForm;
-
-  // Histórico de vendas do parceiro (da planilha de pedidos)
-  const vendPar=STATE.pedidos.filter(p=>(p.Pessoa||"").includes(parc.split(" ")[0])||parc==="Planet Kids Hair"&&(p.Pessoa||"").toLowerCase().includes("planet"));
-
-  // Vendas por mês do parceiro
-  const mesVendas={};
-  STATE.pedidos.filter(p=>p.Pago==="Sim"&&(p.Pessoa||"").toLowerCase().includes(parc.toLowerCase().split(" ")[0].toLowerCase())).forEach(p=>{
-    const d=serial2date(p["Data Venda"]||"");
-    if(!d||d.length<7)return;
+function pgParceiro(){
+  const parc=S.parcSel;
+  const est=S.consig.filter(c=>(c.Local||"")===parc&&N(c["Estoque Atual"])>0);
+  const f=S.vendaForm;
+  // Cards de resumo do parceiro
+  const totAD=est.reduce((s,c)=>s+N(c["Preço AD"])*N(c.Quantidade),0);
+  const totVend=est.reduce((s,c)=>s+N(c["Preço AD"])*N(c["Quantidade Vendida"]),0);
+  const totEst=est.reduce((s,c)=>s+N(c["Estoque Atual"]),0);
+  const qtdVend=est.reduce((s,c)=>s+N(c["Quantidade Vendida"]),0);
+  // Histórico mensal
+  const pm={};
+  S.pedidos.filter(p=>p.Pago==="Sim"&&(p.Pessoa||"").toLowerCase().includes(parc.toLowerCase().split(" ")[0])).forEach(p=>{
+    const d=fmtDate(p["Data Venda"]||"");if(!d||d.length<7)return;
     const m=new Date(d).getMonth();
-    if(!mesVendas[m])mesVendas[m]={total:0,qtd:0};
-    mesVendas[m].total+=(parseNum(p["Valor Recebido"])||parseNum(p.Valor)||0);
-    mesVendas[m].qtd+=(+p.Qtdd||1);
+    if(!pm[m])pm[m]={tot:0,qtd:0};
+    pm[m].tot+=N(p["Valor Recebido"])||N(p.Valor);
+    pm[m].qtd+=N(p.Qtdd)||1;
   });
-  const mesE=Object.entries(mesVendas);
-  const mxV=Math.max(...mesE.map(([,v])=>v.total),1);
-
-  // Resumo mensal por produto do parceiro
-  const prodMes={};
-  const mesAtual=new Date().getMonth();
-  STATE.pedidos.filter(p=>p.Pago==="Sim").forEach(p=>{
-    const d=serial2date(p["Data Venda"]||"");
-    if(!d||d.length<7)return;
-    const m=new Date(d).getMonth();
-    if(m!==mesAtual)return;
-    const nome=p.Impressão||"";
-    if(!prodMes[nome])prodMes[nome]={qtd:0,total:0,datas:[]};
-    prodMes[nome].qtd+=(+p.Qtdd||1);
-    prodMes[nome].total+=(parseNum(p["Valor Recebido"])||parseNum(p.Valor)||0);
-    if(d&&!prodMes[nome].datas.includes(d.slice(5)))prodMes[nome].datas.push(d.slice(5));
-  });
-
-  const parcBtns=Object.keys(PARCEIROS).map(p=>`<button class="filter-btn${parc===p?" active":""}" onclick="STATE.parcSel='${p}';render()">${p}</button>`).join("");
-  const opts=STATE.loadC?`<option disabled>Carregando...</option>`:est.map(c=>`<option value="${c.Impressão||""}">${c.Impressão} — ${c.Cor} (est: ${c["Estoque Atual"]})</option>`).join("");
-
-  // Estoque + resumo mensal lado a lado
-  const stItems=est.map(c=>{
-    const e=parseNum(c["Estoque Atual"]);
-    const pm=prodMes[c.Impressão||""]||{qtd:0,total:0,datas:[]};
-    return`<div class="stock-item" style="background:${e<=2?"#fffbeb":"#f9fafb"};${e<=2?"border:1px solid #fcd34d":""};flex-wrap:wrap;gap:8px">
-      <div style="flex:1;min-width:140px">
-        <div class="name">${c.Impressão||""}</div>
-        <div class="sub">${c.Cor} · Sug: ${R(parseNum(c["Preço Sugerido"]))}</div>
-      </div>
-      <div style="text-align:center;min-width:50px">
-        <div class="qty" style="color:${e<=2?"#d97706":"#16a34a"}">${e}</div>
-        <div class="qty-lbl">estoque</div>
-      </div>
-      <div style="text-align:center;min-width:60px;background:#eef2ff;border-radius:8px;padding:4px 8px">
-        <div style="font-weight:900;font-size:18px;color:#4f46e5">${pm.qtd}</div>
-        <div style="font-size:10px;color:#6b7280">vendido/mês</div>
-      </div>
-      <div style="text-align:center;min-width:70px;background:#f0fdf4;border-radius:8px;padding:4px 8px">
-        <div style="font-weight:900;font-size:14px;color:#16a34a">${R(pm.total)}</div>
-        <div style="font-size:10px;color:#6b7280">${pm.datas.slice(-2).join(", ")||"—"}</div>
-      </div>
-      <div style="text-align:center;min-width:65px;background:#f0fdf4;border-radius:8px;padding:4px 8px">
-        <div style="font-weight:900;font-size:13px;color:#15803d">${R(parseNum(c["Preço AD"]))}</div>
-        <div style="font-size:10px;color:#6b7280">preço AD</div>
-      </div>
-      <div style="text-align:center;min-width:65px;background:#ede9fe;border-radius:8px;padding:4px 8px">
-        <div style="font-weight:900;font-size:13px;color:#5b21b6">${R(parseNum(c["Envio para AD"])||parseNum(c["Reposição"])||parseNum(c["EnvioAD"])||0)}</div>
-        <div style="font-size:10px;color:#6b7280">envio AD</div>
-      </div>
+  const me=Object.entries(pm);
+  const mx=Math.max(...me.map(([,v])=>v.tot),1);
+  const opts=S.lC?`<option disabled>Carregando...</option>`:est.map(c=>`<option value="${c.Impressão||""}">${c.Impressão} — ${c.Cor} (est: ${N(c["Estoque Atual"])})</option>`).join("");
+  const regVendas=S.vendas.slice(0,4).map(v=>`<div class="vreg"><span style="font-weight:600">${v.impressao}</span><span style="color:#16a34a;font-weight:700">×${v.qtd} · ${v.data}</span></div>`).join("");
+  const stItems=est.length?est.map(c=>{
+    const e=N(c["Estoque Atual"]),vd=N(c["Quantidade Vendida"]);
+    return`<div class="si" style="background:${e<=2?"#fffbeb":"#f9fafb"};${e<=2?"border:1px solid #fcd34d":""}">
+      <div class="si-name"><div class="n">${c.Impressão||""}</div><div class="s">${c.Cor||""}</div></div>
+      <div class="si-pill" style="background:${e<=2?"#fef3c7":"#f0fdf4"}"><div class="pv" style="color:${e<=2?"#d97706":"#16a34a"}">${e}</div><div class="pl">estoque</div></div>
+      <div class="si-pill" style="background:#eef2ff"><div class="pv" style="color:#4f46e5;font-size:14px">${vd}</div><div class="pl">vendido</div></div>
+      <div class="si-pill" style="background:#f0fdf4"><div class="pv" style="color:#15803d;font-size:13px">${R(N(c["Preço AD"]))}</div><div class="pl">preço AD</div></div>
+      <div class="si-pill" style="background:#ede9fe"><div class="pv" style="color:#5b21b6;font-size:13px">${R(N(c["Preço Sugerido"]))}</div><div class="pl">p. sugerido</div></div>
     </div>`;
-  }).join("")||`<div class="empty">Sem estoque para este parceiro</div>`;
-
-  const regVendas=STATE.vendas.slice(0,4).map(v=>`<div class="venda-reg"><span style="font-weight:600">${v.impressao}</span><span style="color:#16a34a;font-weight:700">×${v.qtd} · ${v.data}</span></div>`).join("");
-
-  // Gráfico histórico
-  const chartHtml=mesE.length?`
-    <div class="card" style="margin-bottom:16px">
-      <h3 style="margin-bottom:12px">📈 Histórico de Vendas — ${parc}</h3>
-      <div style="display:flex;align-items:flex-end;gap:8px;height:90px;margin-bottom:8px">
-        ${mesE.map(([m,v])=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-          <div style="font-size:9px;color:#9ca3af">${R(v.total).replace("R$ ","")}</div>
-          <div style="width:100%;background:#4f46e5;border-radius:4px 4px 0 0;height:${(v.total/mxV)*72}px;min-height:4px;position:relative">
-            <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:#7c3aed;font-weight:700;white-space:nowrap">${v.qtd} un.</div>
-          </div>
-          <div style="font-size:10px;color:#6b7280">${MESES[+m]}</div>
-        </div>`).join("")}
-      </div>
-      <div style="display:flex;gap:16px;font-size:12px;color:#6b7280;border-top:1px solid #f3f4f6;padding-top:8px">
-        <span>Total histórico: <strong style="color:#4f46e5">${R(mesE.reduce((s,[,v])=>s+v.total,0))}</strong></span>
-        <span>Peças vendidas: <strong style="color:#7c3aed">${mesE.reduce((s,[,v])=>s+v.qtd,0)}</strong></span>
-      </div>
-    </div>`:`<div class="card" style="margin-bottom:16px;text-align:center;color:#9ca3af;padding:24px;font-size:13px">Sem histórico de vendas registrado para este parceiro</div>`;
-
+  }).join(""):`<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px">Sem estoque para este parceiro</div>`;
   return`
-    <div class="parceiro-header">
-      <div class="pre">Portal do Parceiro</div>
-      <h2>${parc}</h2>
-      <p>Registre as vendas · Fechamento dia 30 · PIX: 376.844.548-89</p>
+    <div class="ph"><div class="pre">Portal do Parceiro</div><h2>${parc}</h2><p>Registre as vendas · Fechamento dia 30 · PIX: 376.844.548-89</p></div>
+    <div class="fbar">${Object.keys(S.parceiros).map(p=>`<button class="fbtn${parc===p?" on":""}" onclick="S.parcSel='${p}';S.vendas=[];render()">${p}</button>`).join("")}</div>
+    <div class="ccards">
+      ${[["Em consignação",R(totAD),"#4f46e5"],["Já vendido",R(totVend),"#16a34a"],["Estoque",totEst+" un.","#d97706"],["Qtd vendida",qtdVend+" peças","#7c3aed"]].map(([l,v,c])=>`<div class="ccard" style="border-top:3px solid ${c}"><div class="kl">${l}</div><div class="cv" style="color:${c}">${v}</div></div>`).join("")}
     </div>
-    <div class="filter-bar">${parcBtns}</div>
-    ${chartHtml}
-    <div class="two-col">
+    ${me.length?`<div class="chart" style="margin-bottom:16px"><h3>📈 Histórico de Vendas — ${parc}</h3><div class="bars">${me.map(([m,v])=>`<div class="bc"><div class="bv">${v.qtd}un</div><div class="bar" style="height:${(v.tot/mx)*75}px"></div><div class="bl">${MESES[+m]}</div></div>`).join("")}</div><div style="display:flex;gap:16px;font-size:12px;color:#6b7280;border-top:1px solid #f3f4f6;padding-top:8px;margin-top:8px"><span>Total: <strong style="color:#4f46e5">${R(me.reduce((s,[,v])=>s+v.tot,0))}</strong></span><span>Peças: <strong style="color:#7c3aed">${me.reduce((s,[,v])=>s+v.qtd,0)}</strong></span></div></div>`:`<div class="card" style="margin-bottom:16px;text-align:center;color:#9ca3af;font-size:13px;padding:20px">Sem histórico registrado para este parceiro</div>`}
+    <div class="parc-layout">
       <div class="card">
         <h3 style="margin-bottom:16px">📝 Registrar Venda</h3>
-        <div class="form-group"><label>Produto *</label>
-          <select id="vf-imp" onchange="STATE.vendaForm.impressao=this.value"><option value="">Selecione...</option>${opts}</select>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div><label class="flbl">Produto *</label>
+            <select class="fsel" onchange="S.vendaForm.impressao=this.value"><option value="">Selecione...</option>${opts}</select></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div><label class="flbl">Quantidade *</label><input class="finp" type="number" min="1" value="${f.qtd}" onchange="S.vendaForm.qtd=+this.value"/></div>
+            <div><label class="flbl">Data *</label><input class="finp" type="date" value="${f.data}" onchange="S.vendaForm.data=this.value"/></div>
+          </div>
+          <div><label class="flbl">Cliente</label><input class="finp" type="text" value="${f.cliente||""}" placeholder="Nome (opcional)" oninput="S.vendaForm.cliente=this.value"/></div>
+          <button id="vbtn" class="btn-pri" style="width:100%;padding:11px" onclick="registrarVenda()">Confirmar Venda</button>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="form-group"><label>Qtd *</label><input id="vf-qtd" type="number" min="1" value="${f.qtd}" onchange="STATE.vendaForm.qtd=+this.value"/></div>
-          <div class="form-group"><label>Data *</label><input id="vf-dt" type="date" value="${f.data}" onchange="STATE.vendaForm.data=this.value"/></div>
-        </div>
-        <div class="form-group"><label>Cliente</label><input id="vf-cli" type="text" value="${f.cliente}" placeholder="Nome (opcional)" oninput="STATE.vendaForm.cliente=this.value"/></div>
-        <button id="venda-btn" class="confirm-btn" style="background:#4f46e5;color:#fff" onclick="registrarVenda()">Confirmar Venda</button>
-        ${STATE.vendas.length?`<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:7px">Registradas nesta sessão:</div>${regVendas}</div>`:""}
+        ${S.vendas.length?`<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:7px">Registradas nesta sessão:</div>${regVendas}</div>`:""}
+        <div class="pixbox"><strong style="color:#15803d">💰 Fechamento Mensal</strong><br>Todo dia 30 · PIX: <strong>376.844.548-89</strong><br>Eduardo Perez Marcelo · Bradesco</div>
       </div>
       <div class="card">
-        <h3 style="margin-bottom:6px">📦 Estoque + Resumo do Mês</h3>
-        <div style="font-size:11px;color:#9ca3af;margin-bottom:12px">Estoque atual · Vendido este mês · Receita e datas</div>
-        ${STATE.loadC?'<div class="loading"><div class="spinner"></div></div>':stItems}
-        <div class="pix-box"><strong style="color:#15803d">💰 Fechamento Mensal</strong><br>Todo dia 30 · PIX: <strong>376.844.548-89</strong><br>Eduardo Perez Marcelo · Bradesco</div>
+        <h3 style="margin-bottom:6px">📦 Estoque + Preços</h3>
+        <div style="font-size:11px;color:#9ca3af;margin-bottom:12px">Estoque atual · Vendido · Preço AD · Preço sugerido</div>
+        ${S.lC?load("Carregando..."):stItems}
       </div>
     </div>
   `;
 }
 
 async function registrarVenda(){
-  const f=STATE.vendaForm;
-  if(!f.impressao||!f.qtd){alert("Selecione o produto e a quantidade.");return;}
-  const btn=document.getElementById("venda-btn");
-  btn.textContent="Salvando...";btn.style.background="#9ca3af";btn.disabled=true;
-  const parc=STATE.parcSel;
-  const sid=PARCEIROS[parc];
-  const item=STATE.consig.find(c=>(c.Local||"")===parc&&(c.Impressão||"")===f.impressao);
-  const pAD=+(item?.["Preço AD"]||0);
-  const row=[`${f.impressao}${item?.Cor||""}`,f.impressao,item?.Cor||"",+f.qtd,f.data,f.cliente,"","",pAD,pAD*+f.qtd,"",+(pAD*1.3).toFixed(2),+((pAD*1.3)*+f.qtd).toFixed(2),+((pAD*0.3)*+f.qtd).toFixed(2)];
+  const f=S.vendaForm;
+  if(!f.impressao||!f.qtd){alert("Selecione produto e quantidade.");return;}
+  const btn=document.getElementById("vbtn");
+  if(btn){btn.textContent="Salvando...";btn.style.background="#9ca3af";btn.disabled=true;}
+  const parc=S.parcSel;
+  const sid=S.parceiros[parc];
+  const item=S.consig.find(c=>(c.Local||"")===parc&&(c.Impressão||"")===f.impressao);
+  const pAD=N(item?.["Preço AD"]||0);
+  const row=[`${f.impressao}${item?.Cor||""}`,f.impressao,item?.Cor||"",N(f.qtd),f.data,f.cliente||"","","",pAD,pAD*N(f.qtd),"",+(pAD*1.3).toFixed(2),+((pAD*1.3)*N(f.qtd)).toFixed(2),+((pAD*.3)*N(f.qtd)).toFixed(2)];
   try{
-    const url=`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent("Histórico de Vendas!A:N")}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${API_KEY}`;
-    const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({values:[row]})});
-    if(!res.ok) throw new Error("A planilha do parceiro precisa estar com permissão de edição pública.");
-    STATE.vendas.unshift({...f,id:Date.now()});
-    STATE.vendaForm={impressao:"",qtd:1,data:today(),cliente:""};
-    btn.textContent="✅ Gravado na planilha!";btn.style.background="#16a34a";
+    await appendSheet(sid,"Histórico de Vendas!A:N",row);
+    S.vendas.unshift({...f,id:Date.now()});
+    S.vendaForm={impressao:"",qtd:1,data:today(),cliente:""};
+    if(btn){btn.textContent="✅ Gravado na planilha!";btn.style.background="#16a34a";}
     setTimeout(()=>render(),1500);
   }catch(e){
-    alert("Atenção: "+e.message);
-    btn.textContent="Confirmar Venda";btn.style.background="#4f46e5";btn.disabled=false;
+    alert("Erro: "+e.message+"\n\nA planilha do parceiro precisa estar com permissão de edição.");
+    if(btn){btn.textContent="Confirmar Venda";btn.style.background="#4f46e5";btn.disabled=false;}
   }
 }
 
-function bindEvents(){}
-
-
-
-// ─── EDITAR / INSERIR PEDIDOS ─────────────────────────────────────────────────
-STATE.editModal = null; // {mode:'edit'|'new', pedido:{...}}
-
-function openEditPedido(idx, filter){
-  const fil = getPedidosFiltrados(filter||"");
-  const b = STATE.busca.toLowerCase();
-  const filb = fil.filter(p=>!b||(p.Pessoa||"").toLowerCase().includes(b)||(p.Impressão||"").toLowerCase().includes(b));
-  STATE.editModal = {mode:'edit', pedido:{...filb[idx]}, origIdx: STATE.pedidos.indexOf(filb[idx])};
-  showEditModal();
-}
-
-function openNewPedido(){
-  STATE.editModal = {mode:'new', pedido:{
-    "Data Venda":"", Pessoa:"", "Impressão":"", Familia:"", Cor:"",
-    Realizado:"Não", Entregue:"Não", Pago:"Não", Qtdd:1,
-    "Preço unitário":0, Valor:0, "Valor Recebido":0
-  }};
-  showEditModal();
-}
-
-function getPedidosFiltrados(filter){
-  return STATE.pedidos.filter(p=>{
-    if(filter==="produzir") return p.Realizado!=="Sim";
-    if(filter==="entregar") return p.Realizado==="Sim"&&p.Entregue==="Não";
-    if(filter==="cobrar")   return (p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não";
-    return true;
-  });
-}
-
-function showEditModal(){
-  const {mode, pedido} = STATE.editModal;
-  const title = mode==='new'?"Novo Pedido":"Editar Pedido";
-  const skuOpts = STATE.skus.map(s=>`<option value="${s.Impressão||""}" ${(pedido["Impressão"]||"")===s.Impressão?"selected":""}>${s.Impressão}</option>`).join("");
-  const famOpts = ["Utilidade","Enfeite","Caixa","Chaveiro","Vaso","Estátua","Fidget","Brinquedo","Letreiro","Outros"].map(f=>`<option value="${f}" ${pedido.Familia===f?"selected":""}>${f}</option>`).join("");
-  const selOpts = (field, opts) => opts.map(o=>`<option value="${o}" ${pedido[field]===o?"selected":""}>${o}</option>`).join("");
-
-  // Calcular custo ao vivo
-  const sku = STATE.skus.find(s=>(s.Impressão||"")===(pedido["Impressão"]||""));
-  const g = parseNum(sku?.FilamentoUnitario||0);
-  const h = parseNum(sku?.TempoemHora||0);
-  const isC = (sku?.Tipo||"")==="Chaveiro";
-  const {tot} = calcCusto(g,h,isC);
-  const pr = parseNum(pedido["Preço unitário"]||0);
-  const lu = pr-tot; const fa = tot>0?pr/tot:0;
-
-  const html=`<div class="modal-overlay" onclick="if(event.target===this)closeEditModal()">
-    <div class="modal" style="max-width:680px">
-      <div class="modal-header">
-        <h3>${title}</h3>
-        <button class="close-btn" onclick="closeEditModal()">✕</button>
-      </div>
-      <div class="form-grid">
-        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Data *</label>
-          <input type="date" value="${pedido["Data Venda"]||""}" onchange="STATE.editModal.pedido['Data Venda']=this.value" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px"/></div>
-        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Cliente *</label>
-          <input type="text" value="${pedido.Pessoa||""}" onchange="STATE.editModal.pedido.Pessoa=this.value" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px"/></div>
-        <div class="full"><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Produto *</label>
-          <select onchange="STATE.editModal.pedido['Impressão']=this.value;showEditModal()" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px">
-            <option value="">Selecione...</option>${skuOpts}</select></div>
-        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Família</label>
-          <select onchange="STATE.editModal.pedido.Familia=this.value" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px"><option value="">—</option>${famOpts}</select></div>
-        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Cor</label>
-          <input type="text" value="${pedido.Cor||""}" onchange="STATE.editModal.pedido.Cor=this.value" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px"/></div>
-        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Quantidade</label>
-          <input type="number" min="1" value="${pedido.Qtdd||1}" onchange="STATE.editModal.pedido.Qtdd=+this.value;STATE.editModal.pedido.Valor=(+this.value)*(parseNum(STATE.editModal.pedido['Preço unitário'])||0);showEditModal()" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px"/></div>
-        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Preço Unitário (R$)</label>
-          <input type="number" min="0" step="0.01" value="${pr||""}" onchange="STATE.editModal.pedido['Preço unitário']=+this.value;STATE.editModal.pedido.Valor=(+this.value)*(parseNum(STATE.editModal.pedido.Qtdd)||1);showEditModal()" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px"/></div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <label style="font-size:12px;font-weight:600;color:#374151">Realizado</label>
-          <select onchange="STATE.editModal.pedido.Realizado=this.value" style="padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px">
-            ${selOpts("Realizado",["Sim","Não","Lead"])}</select></div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <label style="font-size:12px;font-weight:600;color:#374151">Entregue</label>
-          <select onchange="STATE.editModal.pedido.Entregue=this.value" style="padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px">
-            ${selOpts("Entregue",["Sim","Não","Consignado"])}</select></div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <label style="font-size:12px;font-weight:600;color:#374151">Pago</label>
-          <select onchange="STATE.editModal.pedido.Pago=this.value;if(this.value==='Sim'){STATE.editModal.pedido['Valor Recebido']=STATE.editModal.pedido.Valor;}else{STATE.editModal.pedido['Valor Recebido']=0;}showEditModal()" style="padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px">
-            ${selOpts("Pago",["Sim","Não","Brinde"])}</select></div>
-        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Valor Recebido (R$)</label>
-          <input type="number" min="0" step="0.01" value="${parseNum(pedido["Valor Recebido"])||""}" onchange="STATE.editModal.pedido['Valor Recebido']=+this.value" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d5db;font-family:inherit;font-size:13px"/></div>
-      </div>
-      ${tot>0?`<div style="margin-top:14px;background:#f0fdf4;border-radius:10px;padding:11px 16px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap">
-        <span>Custo: <strong style="color:#dc2626">${R(tot)}</strong></span>
-        <span>Lucro: <strong style="color:${lu>0?"#16a34a":"#ef4444"}">${R(lu)}</strong></span>
-        <span>Markup: <strong style="color:#d97706">×${fa.toFixed(2)}</strong></span>
-        <span>Valor pedido: <strong style="color:#4f46e5">${R(parseNum(pedido.Valor))}</strong></span>
-      </div>`:""}
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
-        <button onclick="closeEditModal()" style="padding:8px 16px;border-radius:9px;border:none;background:#f3f4f6;color:#374151;font-weight:700;cursor:pointer;font-family:inherit">Cancelar</button>
-        <button onclick="salvarPedido()" class="save-btn">💾 Salvar Pedido</button>
-      </div>
-    </div>
-  </div>`;
-  let mc=document.getElementById("modal-container");
-  if(!mc){mc=document.createElement("div");mc.id="modal-container";document.body.appendChild(mc);}
-  mc.innerHTML=html;
-}
-
-function closeEditModal(){
-  STATE.editModal=null;
-  const el=document.getElementById("modal-container");
-  if(el) el.innerHTML="";
-}
-
-function salvarPedido(){
-  const {mode, pedido, origIdx} = STATE.editModal;
-  if(!pedido.Pessoa||!pedido["Impressão"]){alert("Preencha cliente e produto.");return;}
-  // Recalcula valor
-  const qtd = parseNum(pedido.Qtdd)||1;
-  const preco = parseNum(pedido["Preço unitário"])||0;
-  pedido.Valor = qtd * preco;
-  if(pedido.Pago==="Sim" && !parseNum(pedido["Valor Recebido"])){
-    pedido["Valor Recebido"] = pedido.Valor;
-  }
-  if(mode==="new"){
-    STATE.pedidos.push(pedido);
-  } else {
-    STATE.pedidos[origIdx] = pedido;
-  }
-  closeEditModal();
-  render();
-  // Nota: para gravar na planilha precisaria do OAuth. Por enquanto salva localmente.
-}
-
-
-// ─── PARCEIROS DINÂMICOS ─────────────────────────────────────────────────────
-function loadParceiros(){
-  const saved=localStorage.getItem('amalello_parceiros');
-  if(saved){
-    try{
-      const p=JSON.parse(saved);
-      Object.assign(PARCEIROS,p);
-    }catch(e){}
-  }
-}
-function saveParceiros(){
-  localStorage.setItem('amalello_parceiros',JSON.stringify(PARCEIROS));
-}
-
-function renderGerenciarParceiros(){
-  const lista=Object.entries(PARCEIROS).map(([nome,id],i)=>`
+// ─── GERENCIAR PARCEIROS ──────────────────────────────────────────────────────
+function pgGerenciar(){
+  const lista=Object.entries(S.parceiros).map(([nome,id])=>`
     <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border-radius:10px;margin-bottom:8px">
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:13px;color:#111827">${nome}</div>
-        <div style="font-size:11px;color:#9ca3af;font-family:monospace">${id.slice(0,20)}...</div>
-      </div>
+      <div style="flex:1"><div style="font-weight:700;font-size:13px">${nome}</div><div style="font-size:11px;color:#9ca3af;font-family:monospace">${id.slice(0,24)}...</div></div>
       <button onclick="removerParceiro('${nome}')" style="padding:4px 10px;border-radius:7px;border:none;background:#fee2e2;color:#991b1b;font-weight:700;cursor:pointer;font-size:11px;font-family:inherit">Remover</button>
-    </div>
-  `).join('');
+    </div>`).join("");
   return`
     <h2>⚙️ Gerenciar Parceiros</h2>
-    <p class="subtitle">Adicione ou remova parceiros de consignação</p>
-    <div class="card" style="margin-bottom:16px">
-      <h3 style="margin-bottom:14px">Parceiros Ativos</h3>
-      ${lista}
-    </div>
+    <p class="sub">Adicione ou remova parceiros de consignação</p>
+    <div class="card" style="margin-bottom:16px"><h3>Parceiros Ativos</h3>${lista}</div>
     <div class="card">
       <h3 style="margin-bottom:14px">➕ Adicionar Novo Parceiro</h3>
-      <div style="background:#fef3c7;border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:12px;color:#92400e">
-        <strong>Como adicionar:</strong><br>
-        1. Duplique uma planilha existente de parceiro no Google Drive<br>
+      <div style="background:#fef3c7;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12px;color:#92400e">
+        1. Duplique uma planilha de parceiro no Google Drive<br>
         2. Compartilhe como "Qualquer pessoa com o link pode visualizar"<br>
-        3. Cole o ID da nova planilha abaixo (parte entre /d/ e /edit na URL)
+        3. Cole o ID da nova planilha abaixo
       </div>
-      <div class="form-group"><label>Nome do Parceiro *</label><input id="np-nome" type="text" placeholder="Ex: Loja da Maria"/></div>
-      <div class="form-group"><label>ID da Planilha Google Sheets *</label><input id="np-id" type="text" placeholder="Ex: 1BxrGwTV535hTLv0ibZCOKYYLd7ge7bES..."/></div>
-      <button onclick="adicionarParceiro()" style="padding:9px 20px;border-radius:9px;border:none;background:#4f46e5;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">Salvar Parceiro</button>
+      <div class="fgrid">
+        <div><label class="flbl">Nome do Parceiro *</label><input id="np-n" class="finp" placeholder="Ex: Loja da Maria"/></div>
+        <div><label class="flbl">ID da Planilha *</label><input id="np-i" class="finp" placeholder="1BxrGwTV535..."/></div>
+      </div>
+      <button onclick="adicionarParceiro()" class="btn-pri" style="margin-top:14px">Salvar Parceiro</button>
     </div>
   `;
 }
-
 function adicionarParceiro(){
-  const nome=document.getElementById('np-nome')?.value?.trim();
-  const id=document.getElementById('np-id')?.value?.trim();
-  if(!nome||!id){alert('Preencha o nome e o ID da planilha.');return;}
-  // extrai só o ID se colarem a URL completa
-  const match=id.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  const sheetId=match?match[1]:id;
-  PARCEIROS[nome]=sheetId;
-  saveParceiros();
-  alert(`Parceiro "${nome}" adicionado com sucesso!`);
-  render();
+  const nome=document.getElementById("np-n")?.value?.trim();
+  const id=document.getElementById("np-i")?.value?.trim();
+  if(!nome||!id){alert("Preencha nome e ID.");return;}
+  const m=id.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  S.parceiros[nome]=m?m[1]:id;
+  localStorage.setItem("amalello_parc",JSON.stringify(S.parceiros));
+  alert(`Parceiro "${nome}" adicionado!`);render();
 }
-
 function removerParceiro(nome){
-  if(!confirm(`Remover parceiro "${nome}"?`))return;
-  delete PARCEIROS[nome];
-  saveParceiros();
+  if(!confirm(`Remover "${nome}"?`))return;
+  delete S.parceiros[nome];
+  localStorage.setItem("amalello_parc",JSON.stringify(S.parceiros));
   render();
 }
 
+// ─── MODAL HELPER ─────────────────────────────────────────────────────────────
+function setModal(id,html){
+  let el=document.getElementById(id);
+  if(!el){el=document.createElement("div");el.id=id;document.body.appendChild(el);}
+  el.innerHTML=html;
+}
+function closeModal(id){const el=document.getElementById(id+"-modal");if(el)el.innerHTML="";}
+
+// ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
+function showLogin(){
+  document.getElementById("body").innerHTML=`
+    <div class="login-wrap">
+      <div class="login-box">
+        <div class="login-icon">🖨️</div>
+        <h1 style="color:#fff;font-weight:900;font-size:28px;margin:0 0 8px;letter-spacing:-.03em">Amalello Design</h1>
+        <p style="color:#71717a;font-size:14px;margin:0 0 36px">Sistema de gestão · Impressão 3D</p>
+        <button onclick="doLogin()" style="width:100%;padding:14px;border-radius:12px;border:none;background:#4f46e5;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px">
+          <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.7C34.7 33.9 30 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></svg>
+          Entrar com Google
+        </button>
+        <p style="color:#52525b;font-size:12px;margin-top:20px">Acesso restrito · Eduardo & Isabela · Parceiros</p>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      </div>
+    </div>`;
+}
+
+// ─── SHOW APP ─────────────────────────────────────────────────────────────────
+function showApp(){
+  document.getElementById("body").innerHTML=`
+    <div class="sb">
+      <div class="sb-logo">
+        <h1>Amalello</h1>
+        <p>Design · Impressão 3D</p>
+        <div class="sb-sync" id="sync-lbl" style="display:none">🟢 Atualizado <span id="sync-time"></span></div>
+      </div>
+      <div class="sb-nav" id="nav"></div>
+      <div class="sb-ft">
+        <button class="sync-btn" onclick="loadAll()">🔄 Sincronizar planilhas</button>
+        <div class="user-box">
+          <div style="color:#3f3f46;font-size:10px;font-weight:700;text-transform:uppercase">Admin</div>
+          <div id="user-info" style="color:#a1a1aa;font-size:12px;margin-top:2px"></div>
+          <div style="color:#3f3f46;font-size:10px;margin-top:3px">🔗 Google Sheets · OAuth</div>
+        </div>
+      </div>
+    </div>
+    <div class="ct"><div class="ci" id="app"></div></div>
+  `;
+  // Load saved parceiros
+  try{const p=localStorage.getItem("amalello_parc");if(p)S.parceiros={...JSON.parse(p)};}catch(e){}
+  render();
+  loadAll();
+}
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-loadParceiros();
-render();
-loadPedidos();
-loadSkus();
-loadConsig();
+showLogin();
+initAuth().catch(e=>console.error("Auth init error:",e));
 </script>
 </body>
 </html>
