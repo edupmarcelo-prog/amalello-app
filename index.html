@@ -276,12 +276,18 @@ function rows2obj(rows,forceIdx){
 }
 
 // ─── API ─────────────────────────────────────────────────────────────────────
+const _cache={};
 async function readSheet(id, range){
   if(!gToken) throw new Error("Não autenticado");
+  const key=id+"|"+range;
+  const now=Date.now();
+  if(_cache[key]&&now-_cache[key].t<120000) return _cache[key].v; // 2 min cache
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}`;
   const res = await fetch(url, {headers:{Authorization:"Bearer "+gToken}});
   if(!res.ok){ const e=await res.json(); throw new Error(e?.error?.message||"Erro leitura: "+res.status); }
-  return (await res.json()).values||[];
+  const vals=(await res.json()).values||[];
+  _cache[key]={v:vals,t:now};
+  return vals;
 }
 
 async function appendSheet(id, range, values){
@@ -303,27 +309,76 @@ let S = {
 };
 
 // ─── LOAD DATA ────────────────────────────────────────────────────────────────
-async function loadAll(){await Promise.all([loadPed(),loadSku(),loadCon()]);}
+async function loadAll(){Object.keys(_cache).forEach(k=>delete _cache[k]);Promise.all([loadPed(),loadSku(),loadCon()]);}
 async function loadPed(){
   S.lP=true;S.eP=null;render();
   try{
     if(!gToken) throw new Error("Token OAuth não disponível. Tente fazer login novamente.");
     const rows=await readSheet(SHEET_ID,"Pedidos!A:N");
-    S.pedidos=rows2obj(rows,[["Valor",12],["Valor Recebido",13],["Preço unitário",11],["Qtdd",10]]);
+    if(!rows||rows.length<2){S.pedidos=[];S.lP=false;render();return;}
+    // Map by fixed column index (A=0 to N=13) - ignore header names
+    S.pedidos=rows.slice(1).filter(r=>r&&r.some(c=>c!=="")).map(r=>{
+      return {
+        "Data Venda": r[0]||"",
+        "Pessoa":     r[1]||"",
+        "Impressão":  r[2]||"",
+        "Familia":    r[3]||"",
+        "Cor":        r[4]||"",
+        "Realizado":  r[5]||"",
+        "Entregue":   r[6]||"",
+        "Pago":       r[7]||"",
+        "Check":      r[8]||"",
+        "Data Pag":   r[9]||"",
+        "Qtdd":       r[10]||1,
+        "Preço unitário": r[11]||0,
+        "Valor":      r[12]||0,
+        "Valor Recebido": r[13]||0,
+        // extras for cost calc (may be in extended columns)
+        "Filamento (gramas)": r[15]||0,
+        "Tempo (h)": r[16]||0,
+      };
+    });
     S.att=new Date().toLocaleTimeString("pt-BR");
   }catch(e){S.eP=e.message||String(e);console.error("loadPed error:",e);}
   S.lP=false;render();
 }
 async function loadSku(){
   S.lS=true;S.eS=null;render();
-  try{const rows=await readSheet(SKU_ID,"Controle de Skus!A:G");S.skus=rows2obj(rows);}
-  catch(e){S.eS=e.message||String(e);}
+  try{
+    const rows=await readSheet(SKU_ID,"Controle de Skus!A:G");
+    if(!rows||rows.length<2){S.skus=[];S.lS=false;render();return;}
+    S.skus=rows.slice(1).filter(r=>r&&r.some(c=>c!=="")).map(r=>({
+      "Codigo": r[0]||"",
+      "Impressão": r[1]||"",
+      "FilamentoUnitario": r[2]||0,
+      "TempoemHora": r[3]||0,
+      "Tipo": r[4]||"",
+      "Link Maker ": r[5]||"",
+      "Foto": r[6]||""
+    }));
+  }catch(e){S.eS=e.message||String(e);}
   S.lS=false;render();
 }
 async function loadCon(){
   S.lC=true;S.eC=null;render();
-  try{const rows=await readSheet(SHEET_ID,"Consignado!A:M");S.consig=rows2obj(rows);}
-  catch(e){S.eC=e.message||String(e);}
+  try{
+    // Try tab names
+    let rows=null;
+    for(const tab of ["Consignado","consignado","Consignação","Consignação ","Sheet1","Controle"]){
+      try{rows=await readSheet(SHEET_ID,tab+"!A:M");if(rows&&rows.length>1)break;}catch(e2){rows=null;}
+    }
+    if(!rows||rows.length<2){S.consig=[];S.lC=false;render();return;}
+    S.consig=rows.slice(1).filter(r=>r&&r.some(c=>c!=="")).map(r=>({
+      "Local": r[0]||"",
+      "Impressão": r[1]||"",
+      "Cor": r[2]||"",
+      "Quantidade": r[3]||0,
+      "Preço AD": r[4]||0,
+      "Preço Sugerido": r[5]||0,
+      "Quantidade Vendida": r[6]||0,
+      "Estoque Atual": r[7]||0,
+    }));
+  }catch(e){S.eC=e.message||String(e);}
   S.lC=false;render();
 }
 
