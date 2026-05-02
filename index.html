@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Amalello Design</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Segoe UI',-apple-system,sans-serif;background:#f1f5f9;display:flex;height:100vh;overflow:hidden;}
@@ -210,37 +211,33 @@ const COR_TIPO = {Chaveiro:"#7c3aed",Caixa:"#d97706",Vaso:"#059669",Utilidade:"#
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
-let gToken = null, gapiOk = false, gsiOk = false, tokenClient = null;
+let gToken = null, tokenClient = null;
 let userEmail = "", userName = "";
 
-function loadScript(src){ return new Promise(r=>{if(document.querySelector(`script[src="${src}"]`)){r();return;}const s=document.createElement("script");s.src=src;s.onload=r;document.head.appendChild(s);}); }
+function loadScript(src){ return new Promise(r=>{if(document.querySelector('script[src="'+src+'"]')){r();return;}const s=document.createElement("script");s.src=src;s.onload=r;document.head.appendChild(s);}); }
 
 async function initAuth(){
-  await Promise.all([loadScript("https://apis.google.com/js/api.js"),loadScript("https://accounts.google.com/gsi/client")]);
-  await new Promise(r=>gapi.load("client",r));
-  await gapi.client.init({apiKey:API_KEY,discoveryDocs:["https://sheets.googleapis.com/$discovery/rest?version=v4"]});
-  gapiOk=true; gsiOk=true;
+  // Wait for GSI to load (loaded in head)
+  await new Promise(r=>{
+    if(window.google&&window.google.accounts){r();return;}
+    const check=setInterval(()=>{if(window.google&&window.google.accounts){clearInterval(check);r();}},100);
+    setTimeout(()=>{clearInterval(check);r();},5000);
+  });
   tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id:CLIENT_ID,
-    scope:SCOPES,
-    callback: resp=>{
-      if(resp.error){console.error("Auth error:",resp);alert("Erro de autenticação: "+resp.error);showLogin();return;}
-      gToken=resp.access_token;
-      gapi.client.setToken({access_token:gToken});
-      // get user info
-      fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{Authorization:"Bearer "+gToken}})
-        .then(r=>r.json()).then(u=>{userEmail=u.email||"";userName=u.name||"";showApp();})
-        .catch(()=>showApp());
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async resp => {
+      if(resp.error){ console.error("Auth error:", resp); showLogin(); return; }
+      gToken = resp.access_token;
+      userEmail = "edupmarcelo@gmail.com";
+      showApp();
     }
   });
 }
 
 function doLogin(){
-  if(!gapiOk){
-    setTimeout(doLogin, 500);
-    return;
-  }
-  tokenClient.requestAccessToken({prompt:""});
+  if(!tokenClient){ setTimeout(doLogin,300); return; }
+  tokenClient.requestAccessToken({prompt:"select_account"});
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -279,29 +276,19 @@ function rows2obj(rows,forceIdx){
 }
 
 // ─── API ─────────────────────────────────────────────────────────────────────
-async function readSheet(id,range){
-  try{
-    // Try gapi first
-    const res=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:id,range});
-    return res.result.values||[];
-  }catch(e){
-    // Fallback to fetch with token
-    if(!gToken) throw e;
-    const url=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}`;
-    const res=await fetch(url,{headers:{Authorization:"Bearer "+gToken}});
-    if(!res.ok){const err=await res.json();throw new Error(err?.error?.message||"Erro leitura planilha");}
-    return (await res.json()).values||[];
-  }
+async function readSheet(id, range){
+  if(!gToken) throw new Error("Não autenticado");
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}`;
+  const res = await fetch(url, {headers:{Authorization:"Bearer "+gToken}});
+  if(!res.ok){ const e=await res.json(); throw new Error(e?.error?.message||"Erro leitura: "+res.status); }
+  return (await res.json()).values||[];
 }
-async function appendSheet(id,range,values){
-  try{
-    await gapi.client.sheets.spreadsheets.values.append({spreadsheetId:id,range,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",resource:{values:[values]}});
-  }catch(e){
-    if(!gToken) throw e;
-    const url=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-    const res=await fetch(url,{method:"POST",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:JSON.stringify({values:[values]})});
-    if(!res.ok){const err=await res.json();throw new Error(err?.error?.message||"Erro gravação planilha");}
-  }
+
+async function appendSheet(id, range, values){
+  if(!gToken) throw new Error("Não autenticado");
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const res = await fetch(url, {method:"POST", headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"}, body:JSON.stringify({values:[values]})});
+  if(!res.ok){ const e=await res.json(); throw new Error(e?.error?.message||"Erro gravação: "+res.status); }
 }
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -320,10 +307,11 @@ async function loadAll(){await Promise.all([loadPed(),loadSku(),loadCon()]);}
 async function loadPed(){
   S.lP=true;S.eP=null;render();
   try{
+    if(!gToken) throw new Error("Token OAuth não disponível. Tente fazer login novamente.");
     const rows=await readSheet(SHEET_ID,"Pedidos!A:N");
     S.pedidos=rows2obj(rows,[["Valor",12],["Valor Recebido",13],["Preço unitário",11],["Qtdd",10]]);
     S.att=new Date().toLocaleTimeString("pt-BR");
-  }catch(e){S.eP=e.message||String(e);}
+  }catch(e){S.eP=e.message||String(e);console.error("loadPed error:",e);}
   S.lP=false;render();
 }
 async function loadSku(){
@@ -928,8 +916,8 @@ function showApp(){
   // Load saved parceiros
   try{const p=localStorage.getItem("amalello_parc");if(p)S.parceiros={...JSON.parse(p)};}catch(e){}
   render();
-  // Small delay to ensure OAuth token is fully set
-  setTimeout(loadAll, 300);
+  // Delay to ensure OAuth token is fully propagated
+  setTimeout(loadAll, 800);
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
