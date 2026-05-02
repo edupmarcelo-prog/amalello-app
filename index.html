@@ -557,16 +557,19 @@ async function salvarPedido(){
     const btn=document.querySelector(".btn-grn");
     if(btn){btn.textContent="Salvando...";btn.disabled=true;}
     if(mode==="new"){
-      // Append new row
-      const row=[ped["Data Venda"],ped.Pessoa,ped["Impressão"],ped.Familia,ped.Cor,ped.Realizado,ped.Entregue,ped.Pago,check,"",qtd,pr,ped.Valor,ped["Valor Recebido"]];
-      await appendSheet(SHEET_ID,"Pedidos!A:N",row);
+      // Novo pedido: escreve A,B,C,E,F,G,H,I,K,L (pula D=Familia, M=Valor, N=ValorRecebido — são fórmulas)
+      // Append só A:C e E:L para não sobrescrever fórmulas em D, M, N
+      const rowBase=[ped["Data Venda"],ped.Pessoa,ped["Impressão"],"",ped.Cor,ped.Realizado,ped.Entregue,ped.Pago,check,"",qtd,pr];
+      await appendSheet(SHEET_ID,"Pedidos!A:L",rowBase);
     }else{
-      // Update existing row by row number
+      // Edição: atualiza por blocos, pulando D(col4), M(col13), N(col14)
       const rowNum=ped._rowNum;
       if(!rowNum){alert("Erro: número da linha não encontrado.");return;}
-      const range=`Pedidos!A${rowNum}:N${rowNum}`;
-      const row=[ped["Data Venda"],ped.Pessoa,ped["Impressão"],ped.Familia,ped.Cor,ped.Realizado,ped.Entregue,ped.Pago,check,"",qtd,pr,ped.Valor,ped["Valor Recebido"]];
-      await updateRow(SHEET_ID,range,row);
+      // Bloco 1: A:C (cols 0-2) = Data, Pessoa, Impressão
+      await updateRow(SHEET_ID,`Pedidos!A${rowNum}:C${rowNum}`,[ped["Data Venda"],ped.Pessoa,ped["Impressão"]]);
+      // Bloco 2: E:L (cols 4-11) = Cor, Realizado, Entregue, Pago, Check, DataPag, Qtdd, Preço
+      await updateRow(SHEET_ID,`Pedidos!E${rowNum}:L${rowNum}`,[ped.Cor,ped.Realizado,ped.Entregue,ped.Pago,check,"",qtd,pr]);
+      // NÃO escreve D (Familia), M (Valor) e N (Valor Recebido) — são fórmulas da planilha
     }
     // Clear cache for pedidos
     Object.keys(_c).filter(k=>k.includes(SHEET_ID)&&k.includes("Pedidos")).forEach(k=>delete _c[k]);
