@@ -221,19 +221,26 @@ async function initAuth(){
   await gapi.client.init({apiKey:API_KEY,discoveryDocs:["https://sheets.googleapis.com/$discovery/rest?version=v4"]});
   gapiOk=true; gsiOk=true;
   tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id:CLIENT_ID, scope:SCOPES,
+    client_id:CLIENT_ID,
+    scope:SCOPES,
     callback: resp=>{
-      if(resp.error){showLogin();return;}
+      if(resp.error){console.error("Auth error:",resp);alert("Erro de autenticação: "+resp.error);showLogin();return;}
       gToken=resp.access_token;
       gapi.client.setToken({access_token:gToken});
-      showApp();
+      // get user info
+      fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{Authorization:"Bearer "+gToken}})
+        .then(r=>r.json()).then(u=>{userEmail=u.email||"";userName=u.name||"";showApp();})
+        .catch(()=>showApp());
     }
   });
 }
 
 function doLogin(){
-  if(!gapiOk){alert("Aguarde o carregamento...");return;}
-  tokenClient.requestAccessToken({prompt:"consent"});
+  if(!gapiOk){
+    setTimeout(doLogin, 500);
+    return;
+  }
+  tokenClient.requestAccessToken({prompt:""});
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -273,11 +280,28 @@ function rows2obj(rows,forceIdx){
 
 // ─── API ─────────────────────────────────────────────────────────────────────
 async function readSheet(id,range){
-  const res=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:id,range});
-  return res.result.values||[];
+  try{
+    // Try gapi first
+    const res=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:id,range});
+    return res.result.values||[];
+  }catch(e){
+    // Fallback to fetch with token
+    if(!gToken) throw e;
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}`;
+    const res=await fetch(url,{headers:{Authorization:"Bearer "+gToken}});
+    if(!res.ok){const err=await res.json();throw new Error(err?.error?.message||"Erro leitura planilha");}
+    return (await res.json()).values||[];
+  }
 }
 async function appendSheet(id,range,values){
-  await gapi.client.sheets.spreadsheets.values.append({spreadsheetId:id,range,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",resource:{values:[values]}});
+  try{
+    await gapi.client.sheets.spreadsheets.values.append({spreadsheetId:id,range,valueInputOption:"USER_ENTERED",insertDataOption:"INSERT_ROWS",resource:{values:[values]}});
+  }catch(e){
+    if(!gToken) throw e;
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    const res=await fetch(url,{method:"POST",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:JSON.stringify({values:[values]})});
+    if(!res.ok){const err=await res.json();throw new Error(err?.error?.message||"Erro gravação planilha");}
+  }
 }
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -894,7 +918,7 @@ function showApp(){
         <button class="sync-btn" onclick="loadAll()">🔄 Sincronizar planilhas</button>
         <div class="user-box">
           <div style="color:#3f3f46;font-size:10px;font-weight:700;text-transform:uppercase">Admin</div>
-          <div id="user-info" style="color:#a1a1aa;font-size:12px;margin-top:2px"></div>
+          <div id="user-info" style="color:#a1a1aa;font-size:12px;margin-top:2px">${userEmail||"Admin"}</div>
           <div style="color:#3f3f46;font-size:10px;margin-top:3px">🔗 Google Sheets · OAuth</div>
         </div>
       </div>
@@ -904,7 +928,8 @@ function showApp(){
   // Load saved parceiros
   try{const p=localStorage.getItem("amalello_parc");if(p)S.parceiros={...JSON.parse(p)};}catch(e){}
   render();
-  loadAll();
+  // Small delay to ensure OAuth token is fully set
+  setTimeout(loadAll, 300);
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
