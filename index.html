@@ -362,23 +362,41 @@ async function loadSku(){
 async function loadCon(){
   S.lC=true;S.eC=null;render();
   try{
-    // Try tab names
+    // Try multiple tab names
     let rows=null;
-    for(const tab of ["Consignado","consignado","Consignação","Consignação ","Sheet1","Controle"]){
-      try{rows=await readSheet(SHEET_ID,tab+"!A:M");if(rows&&rows.length>1)break;}catch(e2){rows=null;}
+    for(const tab of ["Consignado","consignado","Consignação","Sheet1","Controle","Consignados"]){
+      try{
+        const r=await readSheet(SHEET_ID,tab+"!A:M");
+        if(r&&r.length>1){rows=r;break;}
+      }catch(e2){rows=null;}
     }
     if(!rows||rows.length<2){S.consig=[];S.lC=false;render();return;}
-    S.consig=rows.slice(1).filter(r=>r&&r.some(c=>c!=="")).map(r=>({
-      "Local": r[0]||"",
-      "Impressão": r[1]||"",
-      "Cor": r[2]||"",
-      "Quantidade": r[3]||0,
-      "Preço AD": r[4]||0,
-      "Preço Sugerido": r[5]||0,
-      "Quantidade Vendida": r[6]||0,
-      "Estoque Atual": r[7]||0,
+    // Debug: log headers
+    console.log("Consig headers:",rows[0]);
+    // Map by index - find correct columns from header
+    const h=rows[0].map(x=>String(x).trim().toLowerCase());
+    const ci=(names)=>{for(const n of names){const i=h.findIndex(x=>x.includes(n));if(i>=0)return i;}return -1;};
+    const iLocal   = ci(["local","parceiro"])>=0 ? ci(["local","parceiro"]) : 0;
+    const iImp     = ci(["impres","produto"])>=0 ? ci(["impres","produto"]) : 1;
+    const iCor     = ci(["cor"])>=0 ? ci(["cor"]) : 2;
+    const iQtd     = ci(["quantidade","qtd"])>=0 ? ci(["quantidade","qtd"]) : 3;
+    const iPAD     = ci(["preço ad","preco ad","ad"])>=0 ? ci(["preço ad","preco ad","ad"]) : 4;
+    const iPSug    = ci(["sugerido","sug"])>=0 ? ci(["sugerido","sug"]) : 5;
+    const iVend    = ci(["vendida","vendido","vend"])>=0 ? ci(["vendida","vendido","vend"]) : 6;
+    const iEst     = ci(["estoque","estq"])>=0 ? ci(["estoque","estq"]) : 7;
+    console.log("Consig col indices:",{iLocal,iImp,iCor,iQtd,iPAD,iPSug,iVend,iEst});
+    S.consig=rows.slice(1).filter(r=>r&&r.length>2&&r.some(c=>c!=="")).map(r=>({
+      "Local":              r[iLocal]||"",
+      "Impressão":          r[iImp]||"",
+      "Cor":                r[iCor]||"",
+      "Quantidade":         N(r[iQtd]),
+      "Preço AD":           N(r[iPAD]),
+      "Preço Sugerido":     N(r[iPSug]),
+      "Quantidade Vendida": N(iVend>=0?r[iVend]:0),
+      "Estoque Atual":      N(iEst>=0?r[iEst]:0),
     }));
-  }catch(e){S.eC=e.message||String(e);}
+    console.log("Consig sample:",S.consig[0]);
+  }catch(e){S.eC=e.message||String(e);console.error("loadCon error:",e);}
   S.lC=false;render();
 }
 
@@ -758,7 +776,7 @@ function pgConsig(){
   const sel=S.consigSel||"todos";
   const parc=[...new Set(S.consig.map(c=>c.Local||""))].filter(Boolean);
   const fil=sel==="todos"?S.consig:S.consig.filter(c=>(c.Local||"")===sel);
-  const totAD=fil.reduce((s,c)=>s+N(c["Preço AD"])*N(c.Quantidade),0);
+  const totAD=fil.reduce((s,c)=>s+N(c["Preço AD"])*Math.round(N(c.Quantidade)),0);
   const totV=fil.reduce((s,c)=>s+N(c["Preço AD"])*N(c["Quantidade Vendida"]),0);
   const totE=fil.reduce((s,c)=>s+N(c["Estoque Atual"]),0);
   const rows=fil.map((c,i)=>{
@@ -795,13 +813,13 @@ function pgConsig(){
 // ─── APP PARCEIRO ─────────────────────────────────────────────────────────────
 function pgParceiro(){
   const parc=S.parcSel;
-  const est=S.consig.filter(c=>(c.Local||"")===parc&&N(c["Estoque Atual"])>0);
+  const est=S.consig.filter(c=>(c.Local||"")===parc&&Math.round(N(c["Estoque Atual"]))>=0);
   const f=S.vendaForm;
   // Cards de resumo do parceiro
-  const totAD=est.reduce((s,c)=>s+N(c["Preço AD"])*N(c.Quantidade),0);
-  const totVend=est.reduce((s,c)=>s+N(c["Preço AD"])*N(c["Quantidade Vendida"]),0);
-  const totEst=est.reduce((s,c)=>s+N(c["Estoque Atual"]),0);
-  const qtdVend=est.reduce((s,c)=>s+N(c["Quantidade Vendida"]),0);
+  const totAD=est.reduce((s,c)=>s+N(c["Preço AD"])*Math.round(N(c.Quantidade)),0);
+  const totVend=est.reduce((s,c)=>s+N(c["Preço AD"])*Math.round(N(c["Quantidade Vendida"])),0);
+  const totEst=est.reduce((s,c)=>s+Math.round(N(c["Estoque Atual"])),0);
+  const qtdVend=est.reduce((s,c)=>s+Math.round(N(c["Quantidade Vendida"])),0);
   // Histórico mensal
   const pm={};
   S.pedidos.filter(p=>p.Pago==="Sim"&&(p.Pessoa||"").toLowerCase().includes(parc.toLowerCase().split(" ")[0])).forEach(p=>{
@@ -819,8 +837,8 @@ function pgParceiro(){
     const e=N(c["Estoque Atual"]),vd=N(c["Quantidade Vendida"]);
     return`<div class="si" style="background:${e<=2?"#fffbeb":"#f9fafb"};${e<=2?"border:1px solid #fcd34d":""}">
       <div class="si-name"><div class="n">${c.Impressão||""}</div><div class="s">${c.Cor||""}</div></div>
-      <div class="si-pill" style="background:${e<=2?"#fef3c7":"#f0fdf4"}"><div class="pv" style="color:${e<=2?"#d97706":"#16a34a"}">${e}</div><div class="pl">estoque</div></div>
-      <div class="si-pill" style="background:#eef2ff"><div class="pv" style="color:#4f46e5;font-size:14px">${vd}</div><div class="pl">vendido</div></div>
+      <div class="si-pill" style="background:${e<=2?"#fef3c7":"#f0fdf4"}"><div class="pv" style="color:${e<=2?"#d97706":"#16a34a"}">${Math.round(e)}</div><div class="pl">estoque</div></div>
+      <div class="si-pill" style="background:#eef2ff"><div class="pv" style="color:#4f46e5;font-size:14px">${Math.round(vd)}</div><div class="pl">vendido</div></div>
       <div class="si-pill" style="background:#f0fdf4"><div class="pv" style="color:#15803d;font-size:13px">${R(N(c["Preço AD"]))}</div><div class="pl">preço AD</div></div>
       <div class="si-pill" style="background:#ede9fe"><div class="pv" style="color:#5b21b6;font-size:13px">${R(N(c["Preço Sugerido"]))}</div><div class="pl">p. sugerido</div></div>
     </div>`;
