@@ -289,14 +289,56 @@ async function loadApoio(){
 
 async function loadResumo(){
   try{
-    // P2=CustoMedioGrama, P4=CustoMedioChaveiro, P7=CustoMedioIma
-    const rows=await readSheet(SHEET_ID,"Resumo!P1:P8");
+    // Read Resumo for cost averages and financial metrics
+    const [rP, rB] = await Promise.all([
+      readSheet(SHEET_ID,"Resumo!P1:P8"),
+      readSheet(SHEET_ID,"Resumo!B1:F12")
+    ]);
+    // Investment totals: read last non-empty value from Filamentos col I and Insumos col H
+    let totalFilamentos = 3803.06, totalInsumos = 478.31,
+        totalEquip = 6500, totalInstr = 251.03;
+    try{
+      const rFil = await readSheet(SHEET_ID,"Filamentos!I:I");
+      const filVals = rFil.slice(1).map(r=>N(r[0]||0)).filter(v=>v>0);
+      if(filVals.length) totalFilamentos = filVals[filVals.length-1]; // last sum row
+      // Sum all values to be safe
+      const filSum = rFil.slice(1).reduce((s,r)=>s+N(r[0]||0),0);
+      if(filSum > totalFilamentos) totalFilamentos = filSum;
+    }catch(e){}
+    try{
+      const rIns = await readSheet(SHEET_ID,"Insumos!H:H");
+      const insSum = rIns.slice(1).reduce((s,r)=>s+N(r[0]||0),0);
+      if(insSum > 0) totalInsumos = insSum;
+    }catch(e){}
+    try{
+      const rEq = await readSheet(SHEET_ID,"Equipamentos!G:G");
+      const eqSum = rEq.slice(1).reduce((s,r)=>s+N(r[0]||0),0);
+      if(eqSum > 0) totalEquip = eqSum;
+    }catch(e){}
+    try{
+      const rIn = await readSheet(SHEET_ID,"Instrumentos!G:G");
+      const inSum = rIn.slice(1).reduce((s,r)=>s+N(r[0]||0),0);
+      if(inSum > 0) totalInstr = inSum;
+    }catch(e){}
+    // Resumo metrics: B5=CustoConfirmado, D5=MargemReal%, F5=MarkupReal, D10=MargemPotencial%, F10=MarkupPotencial
+    const custoConf   = N(rB[4]?.[1] || 0);  // B5 = row index 4, col index 1
+    const margemReal  = N(rB[4]?.[3] || 0);  // D5 = row index 4, col index 3
+    const markupReal  = N(rB[4]?.[5] || 0);  // F5 = row index 4, col index 5
+    const margemPot   = N(rB[9]?.[3] || 0);  // D10 = row index 9, col index 3
+    const markupPot   = N(rB[9]?.[5] || 0);  // F10 = row index 9, col index 5
     S.resumo={
-      custoGrama: N(rows[1]?.[0]||0),
-      custoChaveiro: N(rows[3]?.[0]||0),
-      custoIma: N(rows[6]?.[0]||0),
+      custoGrama:    N(rP[1]?.[0]||0.09),
+      custoChaveiro: N(rP[3]?.[0]||0.37),
+      custoIma:      N(rP[6]?.[0]||0.18),
+      totalFilamentos, totalInsumos, totalEquip, totalInstr,
+      custoConf, margemReal, markupReal, margemPot, markupPot,
     };
-  }catch(e){S.resumo={custoGrama:0.09,custoChaveiro:0.37,custoIma:0.18};}
+  }catch(e){
+    console.error("loadResumo error:",e);
+    S.resumo={custoGrama:0.09,custoChaveiro:0.37,custoIma:0.18,
+      totalFilamentos:3803.06,totalInsumos:478.31,totalEquip:6500,totalInstr:251.03,
+      custoConf:0,margemReal:0,markupReal:0,margemPot:0,markupPot:0};
+  }
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
