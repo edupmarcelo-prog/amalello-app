@@ -615,9 +615,23 @@ async function salvarPedido(){
     const btn=document.querySelector(".btn-grn");
     if(btn){btn.textContent="Salvando...";btn.disabled=true;}
     if(mode==="new"){
-      // Novo pedido: escreve apenas A(Data), B(Pessoa), C(Impressão), E(Cor), F(Realizado), G(Entregue), H(Pago), K(Qtdd), L(Preço)
-      // Pula: D=Família, I=Check, J=DataPag, M=Valor, N=ValorRecebido — todos são fórmulas da planilha
-      await appendSheet(SHEET_ID,"Pedidos!A:C",[ped["Data Venda"],ped.Pessoa,ped["Impressão"]]);
+      // Novo pedido: escreve A:L numa linha só, deixando vazio D(Família), I(Check), J(DataPag) — são fórmulas
+      // M(Valor) e N(ValorRecebido) também são fórmulas, não precisam ser escritas
+      const row=[
+        ped["Data Venda"],  // A - Data Venda
+        ped.Pessoa,          // B - Pessoa
+        ped["Impressão"],    // C - Impressão
+        "",                  // D - Família (FÓRMULA - deixa vazio)
+        ped.Cor,             // E - Cor
+        ped.Realizado,       // F - Realizado
+        ped.Entregue,        // G - Entregue
+        ped.Pago,            // H - Pago
+        "",                  // I - Check (FÓRMULA - deixa vazio)
+        "",                  // J - Data Pag (vazio)
+        qtd,                 // K - Qtdd
+        pr,                  // L - Preço unitário
+      ];
+      await appendSheet(SHEET_ID,"Pedidos!A:L",row);
     }else{
       // Edição: atualiza por blocos individuais, pulando D, I, M, N (fórmulas)
       const rowNum=ped._rowNum;
