@@ -225,6 +225,7 @@ async function loadPed(){
       Valor:r[12]||0,
       "Valor Recebido":r[13]||0,
       // cost columns from sheet
+      Observacao:r[16]||"",
       Adicional:r[17]||0,
       CFG:r[18]||0,
       CEE:r[21]||0,
@@ -289,54 +290,38 @@ async function loadApoio(){
 
 async function loadResumo(){
   try{
-    // Read Resumo for cost averages and financial metrics
-    const [rP, rB] = await Promise.all([
+    // Fetch individual cells for reliability
+    const [rP,rB5,rD5,rF5,rD10,rF10,rJ4] = await Promise.all([
       readSheet(SHEET_ID,"Resumo!P1:P8"),
-      readSheet(SHEET_ID,"Resumo!B1:F12")
+      readSheet(SHEET_ID,"Resumo!B5"),
+      readSheet(SHEET_ID,"Resumo!D5"),
+      readSheet(SHEET_ID,"Resumo!F5"),
+      readSheet(SHEET_ID,"Resumo!D10"),
+      readSheet(SHEET_ID,"Resumo!F10"),
+      readSheet(SHEET_ID,"Resumo!J4"),
     ]);
-    // Investment totals: read last non-empty value from Filamentos col I and Insumos col H
-    let totalFilamentos = 3803.06, totalInsumos = 478.31,
-        totalEquip = 6500, totalInstr = 251.03;
-    try{
-      const rFil = await readSheet(SHEET_ID,"Filamentos!I:I");
-      const filVals = rFil.slice(1).map(r=>N(r[0]||0)).filter(v=>v>0);
-      if(filVals.length) totalFilamentos = filVals[filVals.length-1]; // last sum row
-      // Sum all values to be safe
-      const filSum = rFil.slice(1).reduce((s,r)=>s+N(r[0]||0),0);
-      if(filSum > totalFilamentos) totalFilamentos = filSum;
-    }catch(e){}
-    try{
-      const rIns = await readSheet(SHEET_ID,"Insumos!H:H");
-      const insSum = rIns.slice(1).reduce((s,r)=>s+N(r[0]||0),0);
-      if(insSum > 0) totalInsumos = insSum;
-    }catch(e){}
-    try{
-      const rEq = await readSheet(SHEET_ID,"Equipamentos!G:G");
-      const eqSum = rEq.slice(1).reduce((s,r)=>s+N(r[0]||0),0);
-      if(eqSum > 0) totalEquip = eqSum;
-    }catch(e){}
-    try{
-      const rIn = await readSheet(SHEET_ID,"Instrumentos!G:G");
-      const inSum = rIn.slice(1).reduce((s,r)=>s+N(r[0]||0),0);
-      if(inSum > 0) totalInstr = inSum;
-    }catch(e){}
-    // Resumo metrics: B5=CustoConfirmado, D5=MargemReal%, F5=MarkupReal, D10=MargemPotencial%, F10=MarkupPotencial
-    const custoConf   = N(rB[4]?.[1] || 0);
-    let margemReal    = N(rB[4]?.[3] || 0); if(margemReal>1) margemReal=margemReal/100;
-    const markupReal  = N(rB[4]?.[5] || 0);
-    let margemPot     = N(rB[9]?.[3] || 0); if(margemPot>1) margemPot=margemPot/100;
-    const markupPot   = N(rB[9]?.[5] || 0);
+    const parseVal=r=>r&&r[0]&&r[0][0]?N(r[0][0]):0;
+    const parsePct=r=>{if(!r||!r[0]||!r[0][0])return 0;let v=N(r[0][0]);if(v>1)v=v/100;return v;};
+    // J4 = Total Investido real from Resumo
+    const totalInv=parseVal(rJ4)||11403.83;
+    let margemReal=parsePct(rD5);
+    let margemPot=parsePct(rD10);
     S.resumo={
       custoGrama:    N(rP[1]?.[0]||0.09),
       custoChaveiro: N(rP[3]?.[0]||0.37),
       custoIma:      N(rP[6]?.[0]||0.18),
-      totalFilamentos, totalInsumos, totalEquip, totalInstr,
-      custoConf, margemReal, markupReal, margemPot, markupPot,
+      totalInv,
+      custoConf:  parseVal(rB5),
+      margemReal,
+      markupReal: parseVal(rF5),
+      margemPot,
+      markupPot:  parseVal(rF10),
     };
+    console.log("Resumo loaded:",JSON.stringify(S.resumo));
   }catch(e){
     console.error("loadResumo error:",e);
     S.resumo={custoGrama:0.09,custoChaveiro:0.37,custoIma:0.18,
-      totalFilamentos:3803.06,totalInsumos:478.31,totalEquip:6500,totalInstr:251.03,
+      totalInv:11403.83,
       custoConf:0,margemReal:0,markupReal:0,margemPot:0,markupPot:0};
   }
 }
@@ -397,8 +382,9 @@ function pgDash(){
   const vConsig=S.consig.reduce((s,c)=>s+N(c["Preço AD"])*N(c["Quantidade Vendida"]),0);
   // CARD5: CARD1 + CARD4
   const vSaldo=vTotalVendas+vConsig;
-  const saldo=vSaldo-TOT_INV;
-  const pay=Math.min((vSaldo/TOT_INV)*100,100);
+  const totInv=S.resumo.totalInv||TOT_INV;
+  const saldo=vSaldo-totInv;
+  const pay=Math.min((vSaldo/totInv)*100,100);
   const pos=saldo>=0;
   // Leads count
   const nLeads=ped.filter(p=>p.Realizado==="Lead").length;
@@ -407,13 +393,17 @@ function pgDash(){
   const aE=ped.filter(p=>p.Realizado==="Sim"&&p.Entregue==="Não").length;
   const aC=ped.filter(p=>(p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não").length;
   // Gráfico: col AB=Mes, AC=Ano, F=Sim, G=Sim|Não, H=Sim → soma col M
-  const pm={};
+  const pm={},mesData={};
   ped.filter(p=>p.Realizado==="Sim"&&["Sim","Não"].includes(p.Entregue)&&p.Pago==="Sim").forEach(p=>{
     const mes=String(p.Mes||"").trim();
     const ano=String(p.Ano||"").trim();
     if(!mes)return;
-    const key=`${mes}/${ano||"2026"}`;
+    const key=mes+"/"+(ano||"2026");
     pm[key]=(pm[key]||0)+N(p.Valor);
+    if(!mesData[key])mesData[key]={custo:0,lucro:0};
+    const custo=N(p.CustoTotal||0);
+    mesData[key].custo+=custo;
+    mesData[key].lucro+=Math.max(N(p.Valor)-custo,0);
   });
   const me=Object.entries(pm);
   const mx=Math.max(...me.map(([,v])=>v),1);
@@ -424,7 +414,7 @@ function pgDash(){
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="font-weight:800;font-size:14px;color:${pos?"#15803d":"#b91c1c"}">${pos?"✅ Operação POSITIVA":"⚠️ Operação ainda NEGATIVA"}</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:2px">Investido: ${R(TOT_INV)} · Saldo Final: ${R(vSaldo)} · Resultado: <strong style="color:${pos?"#15803d":"#b91c1c"}">${R(saldo)}</strong></div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px">Investido: ${R(totInv)} · Saldo Final: ${R(vSaldo)} · Resultado: <strong style="color:${pos?"#15803d":"#b91c1c"}">${R(saldo)}</strong></div>
         </div>
         <div style="font-size:22px;font-weight:900;color:${pos?"#15803d":"#b91c1c"}">${pay.toFixed(0)}%</div>
       </div>
@@ -437,7 +427,7 @@ function pgDash(){
       ${kpi("A Receber (Check)",R(vPot),potPeds.length+" pendentes","#d97706")}
       ${kpi("Consignação (AD)",R(vConsig),"Vendido nos parceiros","#7c3aed")}
       ${kpi("Saldo Final",R(vSaldo),"Vendas + Consignação","#0891b2")}
-      ${kpi("Total Investido",R(TOT_INV),"Equip+Filam+Insumos","#ef4444")}
+      ${kpi("Total Investido",R(totInv),"Resumo J4","#ef4444")}
       ${kpi("Custo Médio Grama",R(S.resumo.custoGrama),"Aba Resumo P2","#059669")}
       ${kpi("Custo Médio Chaveiro",R(S.resumo.custoChaveiro),"Aba Resumo P4","#db2777")}
       ${kpi("Custo Médio Imã",R(S.resumo.custoIma),"Aba Resumo P7","#9333ea")}
@@ -448,7 +438,32 @@ function pgDash(){
       <div class="accard" style="background:#f5f3ff"><div class="acnum" style="color:#7c3aed">${aC}</div><div class="aclbl" style="color:#7c3aed">💸 Cobrar</div></div>
       <div class="accard" style="background:#eff6ff"><div class="acnum" style="color:#2563eb">${nLeads}</div><div class="aclbl" style="color:#2563eb">🎯 Leads</div></div>
     </div>
-    ${me.length?`<div class="chart"><h3>Faturamento por mês (F=Sim, H=Sim · col M)</h3><div class="bars">${me.map(([m,v])=>`<div class="bc"><div class="bv">${R(v).replace("R$\u00a0","")}</div><div class="bar" style="height:${(v/mx)*78}px"></div><div class="bl">${m}</div></div>`).join("")}</div></div>`:""}
+    ${(()=>{
+      if(!me.length) return "";
+      let h='<div class="chart"><h3>Faturamento confirmado por mês</h3>';
+      h+='<div style="display:flex;align-items:flex-end;gap:10px;height:140px;padding-bottom:4px">';
+      me.forEach(([key,total])=>{
+        const md=mesData[key]||{custo:0,lucro:0};
+        const pctL=total>0?Math.round((md.lucro/total)*100):0;
+        const barH=Math.max(Math.round((total/mx)*100),4);
+        const hc=total>0?Math.round((md.custo/total)*barH):0;
+        const hl=barH-hc;
+        h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px">';
+        h+='<div style="font-size:10px;font-weight:800;color:#16a34a">'+pctL+'%</div>';
+        h+='<div style="font-size:9px;color:#9ca3af">'+R(total).replace("R $ ","").replace("R$ ","")+'</div>';
+        h+='<div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end">';
+        if(hl>0) h+='<div style="width:100%;height:'+hl+'px;background:#16a34a;border-radius:'+(hc>0?'0':'4px')+'px 4px 0 0"></div>';
+        if(hc>0) h+='<div style="width:100%;height:'+hc+'px;background:#f87171;border-radius:0 0 4px 4px"></div>';
+        h+='</div><div style="font-size:10px;color:#6b7280;text-align:center">'+key.split("/")[0]+'</div></div>';
+      });
+      h+='</div>';
+      h+='<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:#6b7280;border-top:1px solid #f3f4f6;padding-top:8px">';
+      h+='<span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px;margin-right:3px"></span>Lucro</span>';
+      h+='<span><span style="display:inline-block;width:10px;height:10px;background:#f87171;border-radius:2px;margin-right:3px"></span>Custo</span>';
+      h+='<span style="margin-left:auto">Total: <strong style="color:#4f46e5">'+R(me.reduce((s,[,v])=>s+v,0))+'</strong></span>';
+      h+='</div></div>';
+      return h;
+    })()}
   `;
 }
 
@@ -468,6 +483,7 @@ function getFilPed(filter){
 function pgPedidos(filter){
   if(S.lP) return load("Carregando pedidos...");
   if(S.eP) return err(S.eP,"loadPed");
+  const isLeads=filter==="leads";
   const titulo={produzir:"🖨️ A Produzir",entregar:"📦 A Entregar",cobrar:"💸 A Cobrar",leads:"🎯 Leads"}[filter]||"📋 Todos os Pedidos";
   const fil=getFilPed(filter);
   const totV=fil.reduce((s,p)=>s+N(p.Valor),0);
@@ -482,6 +498,24 @@ function pgPedidos(filter){
   }
   const rows=fil.map((p,i)=>{
     const dt=fmtDate(p["Data Venda"]||"").slice(5)||"—";
+    if(isLeads){
+      // Leads: Data, Cliente, Produto, Observação(Q), Família, Cor, Qtd, Valor, Realizado + lápis/ver
+      return`<tr>
+        <td style="color:#6b7280">${dt}</td>
+        <td style="font-weight:600;color:#111827;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.Pessoa||""}</td>
+        <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p["Impressão"]||""}</td>
+        <td style="color:#374151;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.Observacao||""}</td>
+        <td style="color:#6b7280">${p.Familia||""}</td>
+        <td style="color:#6b7280">${p.Cor||""}</td>
+        <td style="text-align:center;font-weight:700">${p.Qtdd||1}</td>
+        <td style="font-weight:800;color:#4f46e5">${R(p.Valor)}</td>
+        <td>${T(p.Realizado||"?","blue")}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-sm" onclick="openEdit(${i},'${filter||""}')">✏️</button>
+          <button class="btn-view" onclick="openDet(${i},'${filter||""}')">Ver</button>
+        </td>
+      </tr>`;
+    }
     return`<tr>
       <td style="color:#6b7280">${dt}</td>
       <td style="font-weight:600;color:#111827;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.Pessoa||""}</td>
@@ -501,6 +535,10 @@ function pgPedidos(filter){
       </td>
     </tr>`;
   }).join("");
+  const leadsHeaders=["Data","Cliente","Produto","Observação","Fam.","Cor","Qtd","Valor","Realizado",""];
+  const normHeaders=["Data","Cliente","Produto","Fam.","Cor","Qtd","Valor","Recebido","Realiz.","Entreg.","Pago","Status",""];
+  const headers=isLeads?leadsHeaders:normHeaders;
+  const colspan=isLeads?10:13;
   return`
     <h2>${titulo}</h2>
     <p class="sub">${fil.length} pedido(s) · ${R(totV)}</p>
@@ -509,8 +547,8 @@ function pgPedidos(filter){
       <button class="btn-pri" onclick="openNew()">+ Novo Pedido</button>
     </div>
     <div class="twrap"><div class="tscroll">
-      <table><thead><tr>${["Data","Cliente","Produto","Fam.","Cor","Qtd","Valor","Recebido","Realiz.","Entreg.","Pago","Status",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-      <tbody>${rows||`<tr><td colspan="13" style="padding:32px;text-align:center;color:#9ca3af">Nenhum pedido encontrado</td></tr>`}</tbody></table>
+      <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>${rows||`<tr><td colspan="${colspan}" style="padding:32px;text-align:center;color:#9ca3af">Nenhum pedido encontrado</td></tr>`}</tbody></table>
     </div></div>
     <div class="tots">
       <span>Total: <strong style="color:#4f46e5">${R(totV)}</strong></span>
@@ -548,7 +586,6 @@ function onProdutoChange(val){
   const sku=S.skus.find(s=>(s["Impressão"]||"")===val);
   if(sku){
     S.editModal.ped.Familia=sku.Tipo||"";
-    // Auto-fill suggested price if not set
     if(!N(S.editModal.ped["Preço unitário"])){
       const preco=calcPrecoSugerido(val);
       S.editModal.ped["Preço unitário"]=preco;
@@ -557,12 +594,26 @@ function onProdutoChange(val){
   }
   showEditModal();
 }
+// Called when user types in product datalist input
+function onProdutoSearch(val){
+  S.editModal.ped["Impressão"]=val;
+  const sku=S.skus.find(s=>(s["Impressão"]||"")===val);
+  if(sku){
+    S.editModal.ped.Familia=sku.Tipo||"";
+    if(!N(S.editModal.ped["Preço unitário"])){
+      const preco=calcPrecoSugerido(val);
+      S.editModal.ped["Preço unitário"]=preco;
+      S.editModal.ped.Valor=preco*(N(S.editModal.ped.Qtdd)||1);
+      showEditModal();
+    }
+  }
+}
 
 function showEditModal(){
   const {mode,ped}=S.editModal;
-  const skuOpts=S.skus.map(s=>`<option value="${s["Impressão"]||""}"${ped["Impressão"]===s["Impressão"]?" selected":""}>${s["Impressão"]}</option>`).join("");
+  const skuOpts=[...S.skus].sort((a,b)=>(a["Impressão"]||"").localeCompare(b["Impressão"]||"")).map(s=>`<option value="${s["Impressão"]||""}">${s["Impressão"]}</option>`).join("");
   const famOpts=["Utilidade","Enfeite","Caixa","Chaveiro","Vaso","Estátua","Fidget","Brinquedo","Letreiro","Outros"].map(f=>`<option${ped.Familia===f?" selected":""}>${f}</option>`).join("");
-  const coresOpts=S.cores.map(c=>`<option${ped.Cor===c?" selected":""}>${c}</option>`).join("");
+  const coresOpts=[...S.cores].sort((a,b)=>a.localeCompare(b)).map(c=>`<option>${c}</option>`).join("");
   const sel=(f,opts)=>opts.map(o=>`<option${ped[f]===o?" selected":""}>${o}</option>`).join("");
   const sku=S.skus.find(s=>(s["Impressão"]||"")===ped["Impressão"]);
   const g=N(sku?.FilamentoUnitario||0),h=N(sku?.TempoemHora||0);
@@ -576,12 +627,14 @@ function showEditModal(){
         <div><label class="flbl">Data *</label><input class="finp" type="date" value="${fmtDate(ped["Data Venda"]||"")||""}" onchange="S.editModal.ped['Data Venda']=this.value"/></div>
         <div><label class="flbl">Cliente *</label><input class="finp" type="text" value="${ped.Pessoa||""}" oninput="S.editModal.ped.Pessoa=this.value"/></div>
         <div class="full"><label class="flbl">Produto *</label>
-          <select class="fsel" onchange="onProdutoChange(this.value)"><option value="">Selecione...</option>${skuOpts}</select></div>
+          <input class="finp" list="sku-list" id="prod-input" placeholder="Digite para buscar..." value="${ped['Impressão']||''}"
+            oninput="onProdutoSearch(this.value)" style="width:100%"/>
+          <datalist id="sku-list">${skuOpts}</datalist></div>
         <div><label class="flbl">Família</label><select class="fsel" onchange="S.editModal.ped.Familia=this.value"><option value="">—</option>${famOpts}</select></div>
         <div><label class="flbl">Cor</label>
-          <select class="fsel" onchange="S.editModal.ped.Cor=this.value">
-            <option value="">Selecione...</option>${coresOpts}
-          </select></div>
+          <input class="finp" list="cor-list" placeholder="Digite para buscar..." value="${ped.Cor||''}"
+            oninput="S.editModal.ped.Cor=this.value" style="width:100%"/>
+          <datalist id="cor-list">${coresOpts}</datalist></div>
         <div><label class="flbl">Quantidade</label><input class="finp" type="number" min="1" value="${N(ped.Qtdd)||1}" onchange="S.editModal.ped.Qtdd=+this.value;S.editModal.ped.Valor=(+this.value)*N(S.editModal.ped['Preço unitário']);showEditModal()"/></div>
         <div><label class="flbl">Preço Unitário (R$)</label><input class="finp" type="number" min="0" step="0.01" value="${pr||""}" onchange="S.editModal.ped['Preço unitário']=+this.value;S.editModal.ped.Valor=(+this.value)*N(S.editModal.ped.Qtdd||1);showEditModal()"/></div>
         <div><label class="flbl">Realizado</label><select class="fsel" onchange="S.editModal.ped.Realizado=this.value">${sel("Realizado",["Sim","Não","Lead"])}</select></div>
@@ -643,22 +696,20 @@ async function salvarPedido(){
       if(newRowMatch){
         const newRow = parseInt(newRowMatch[1]);
         const prevRow = newRow - 1;
-        // 3. Copy formula from D(col4) of previous row to new row
-        await Promise.all([
-          fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"/values/"+encodeURIComponent("Pedidos!D"+prevRow)+"?valueInputOption=USER_ENTERED",
-            {method:"GET",headers:{Authorization:"Bearer "+gToken}}
-          ).then(r=>r.json()).then(async d=>{
-            // Get formula from prev row
-            const fRes = await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"?ranges=Pedidos!D"+prevRow+"&fields=sheets.data.rowData.values.userEnteredValue",
+        // 3. Copy formulas D(Família) and I(Check) from previous row
+        async function copyFormCol(col){
+          try{
+            const fRes=await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"?ranges=Pedidos!"+col+prevRow+"&fields=sheets.data.rowData.values.userEnteredValue",
               {headers:{Authorization:"Bearer "+gToken}});
-            const fData = await fRes.json();
-            const formula = fData?.sheets?.[0]?.data?.[0]?.rowData?.[0]?.values?.[0]?.userEnteredValue?.formulaValue;
+            const fData=await fRes.json();
+            const formula=fData?.sheets?.[0]?.data?.[0]?.rowData?.[0]?.values?.[0]?.userEnteredValue?.formulaValue;
             if(formula){
-              await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"/values/"+encodeURIComponent("Pedidos!D"+newRow)+"?valueInputOption=USER_ENTERED",
+              await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"/values/"+encodeURIComponent("Pedidos!"+col+newRow)+"?valueInputOption=USER_ENTERED",
                 {method:"PUT",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:JSON.stringify({values:[[formula]]})});
             }
-          }).catch(()=>{}),
-        ]);
+          }catch(e){console.warn("copyFormCol",col,e);}
+        }
+        await Promise.all([copyFormCol("D"), copyFormCol("I")]);
       }
     }else{
       // Edição: atualiza por blocos individuais, pulando D, I, M, N (fórmulas)
@@ -790,13 +841,8 @@ function pgProdutos(){
 function pgFin(){
   if(S.lP) return load("Carregando...");
   if(S.eP) return err(S.eP,"loadPed");
-  var dynInvest={
-    Equipamentos:S.resumo.totalEquip||6500,
-    Instrumentos:S.resumo.totalInstr||251.03,
-    Insumos:S.resumo.totalInsumos||478.31,
-    Filamentos:S.resumo.totalFilamentos||3803.06,
-  };
-  var dynTotInv=Object.values(dynInvest).reduce(function(a,b){return a+b;},0);
+  var dynTotInv=S.resumo.totalInv||11403.83;
+  var dynInvest={Total:dynTotInv};
   var okPeds=S.pedidos.filter(function(p){return p.Realizado==="Sim"&&["Sim","Não"].includes(p.Entregue)&&p.Pago==="Sim";});
   var vOK=okPeds.reduce(function(s,p){return s+N(p.Valor);},0);
   var saldo=vOK-dynTotInv;
@@ -838,12 +884,9 @@ function pgFin(){
   html+=kpi("Markup Potencial",mxp(S.resumo.markupPot),"Resumo F10","#db2777");
   html+="</div>";
   html+='<div class="twocol">';
-  html+='<div class="card"><h3>Detalhamento do Investimento <span style="font-size:10px;color:#9ca3af;font-weight:400">(da planilha)</span></h3>';
-  Object.entries(dynInvest).forEach(function(e){
-    var c={Equipamentos:"#ef4444",Instrumentos:"#f59e0b",Insumos:"#10b981",Filamentos:"#4f46e5"}[e[0]];
-    html+='<div class="irow"><div><span class="idot" style="background:'+c+'"></span>'+e[0]+'</div><strong>'+R(e[1])+'</strong></div>';
-  });
-  html+='<div class="irow" style="border:none;font-weight:900;font-size:13px"><span>Total</span><span style="color:#ef4444">'+R(dynTotInv)+'</span></div></div>';
+  html+='<div class="card"><h3>Total Investido <span style="font-size:10px;color:#9ca3af;font-weight:400">(Resumo J4)</span></h3>';
+  html+='<div class="irow" style="border:none;font-weight:900;font-size:16px"><span>Total Geral</span><span style="color:#ef4444">'+R(dynTotInv)+'</span></div>';
+  html+='<div style="font-size:11px;color:#9ca3af;margin-top:6px">Valor consolidado diretamente da célula Resumo!J4</div></div>';
   html+='<div class="card"><h3>Receita por Categoria (F=Sim H=Sim)</h3>';
   Object.entries(pf).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
     html+='<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>'+(e[0]||"—")+'</span><span style="font-weight:700;color:'+(COR_TIPO[e[0]]||"#4f46e5")+'">'+R(e[1])+'</span></div>';
