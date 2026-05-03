@@ -291,7 +291,7 @@ async function loadApoio(){
 async function loadResumo(){
   try{
     // Fetch individual cells for reliability
-    const [rP,rB5,rD5,rF5,rD10,rF10,rJ4] = await Promise.all([
+    const [rP,rB5,rD5,rF5,rD10,rF10,rJ4,rA2,rB2,rC2,rJ2] = await Promise.all([
       readSheet(SHEET_ID,"Resumo!P1:P8"),
       readSheet(SHEET_ID,"Resumo!B5"),
       readSheet(SHEET_ID,"Resumo!D5"),
@@ -299,10 +299,13 @@ async function loadResumo(){
       readSheet(SHEET_ID,"Resumo!D10"),
       readSheet(SHEET_ID,"Resumo!F10"),
       readSheet(SHEET_ID,"Resumo!J4"),
+      readSheet(SHEET_ID,"Resumo!A2"),
+      readSheet(SHEET_ID,"Resumo!B2"),
+      readSheet(SHEET_ID,"Resumo!C2"),
+      readSheet(SHEET_ID,"Resumo!J2"),
     ]);
     const parseVal=r=>r&&r[0]&&r[0][0]?N(r[0][0]):0;
     const parsePct=r=>{if(!r||!r[0]||!r[0][0])return 0;let v=N(r[0][0]);if(v>1)v=v/100;return v;};
-    // J4 = Total Investido real from Resumo
     const totalInv=parseVal(rJ4)||11403.83;
     let margemReal=parsePct(rD5);
     let margemPot=parsePct(rD10);
@@ -311,6 +314,10 @@ async function loadResumo(){
       custoChaveiro: N(rP[3]?.[0]||0.37),
       custoIma:      N(rP[6]?.[0]||0.18),
       totalInv,
+      equipamentos: parseVal(rA2)||6500,
+      insumos:      parseVal(rB2)||478.31,
+      instrumentos: parseVal(rC2)||251.03,
+      filamentos:   parseVal(rJ2)||3803.06,
       custoConf:  parseVal(rB5),
       margemReal,
       markupReal: parseVal(rF5),
@@ -842,7 +849,12 @@ function pgFin(){
   if(S.lP) return load("Carregando...");
   if(S.eP) return err(S.eP,"loadPed");
   var dynTotInv=S.resumo.totalInv||11403.83;
-  var dynInvest={Total:dynTotInv};
+  var dynInvest={
+    Equipamentos: S.resumo.equipamentos||6500,
+    Instrumentos: S.resumo.instrumentos||251.03,
+    Insumos:      S.resumo.insumos||478.31,
+    Filamentos:   S.resumo.filamentos||3803.06,
+  };
   var okPeds=S.pedidos.filter(function(p){return p.Realizado==="Sim"&&["Sim","Não"].includes(p.Entregue)&&p.Pago==="Sim";});
   var vOK=okPeds.reduce(function(s,p){return s+N(p.Valor);},0);
   var saldo=vOK-dynTotInv;
@@ -884,9 +896,13 @@ function pgFin(){
   html+=kpi("Markup Potencial",mxp(S.resumo.markupPot),"Resumo F10","#db2777");
   html+="</div>";
   html+='<div class="twocol">';
-  html+='<div class="card"><h3>Total Investido <span style="font-size:10px;color:#9ca3af;font-weight:400">(Resumo J4)</span></h3>';
-  html+='<div class="irow" style="border:none;font-weight:900;font-size:16px"><span>Total Geral</span><span style="color:#ef4444">'+R(dynTotInv)+'</span></div>';
-  html+='<div style="font-size:11px;color:#9ca3af;margin-top:6px">Valor consolidado diretamente da célula Resumo!J4</div></div>';
+  html+='<div class="card"><h3>Detalhamento do Investimento <span style="font-size:10px;color:#9ca3af;font-weight:400">(Resumo A2/B2/C2/J2)</span></h3>';
+  var iColors={Equipamentos:"#ef4444",Instrumentos:"#f59e0b",Insumos:"#10b981",Filamentos:"#4f46e5"};
+  Object.entries(dynInvest).forEach(function(e){
+    var ic=iColors[e[0]]||"#6b7280";
+    html+='<div class="irow"><div><span class="idot" style="background:'+ic+'"></span>'+e[0]+'</div><strong>'+R(e[1])+'</strong></div>';
+  });
+  html+='<div class="irow" style="border:none;font-weight:900;font-size:13px"><span>Total (Resumo J4)</span><span style="color:#ef4444">'+R(dynTotInv)+'</span></div></div>';
   html+='<div class="card"><h3>Receita por Categoria (F=Sim H=Sim)</h3>';
   Object.entries(pf).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
     html+='<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>'+(e[0]||"—")+'</span><span style="font-weight:700;color:'+(COR_TIPO[e[0]]||"#4f46e5")+'">'+R(e[1])+'</span></div>';
