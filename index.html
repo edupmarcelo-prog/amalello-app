@@ -321,11 +321,11 @@ async function loadResumo(){
       if(inSum > 0) totalInstr = inSum;
     }catch(e){}
     // Resumo metrics: B5=CustoConfirmado, D5=MargemReal%, F5=MarkupReal, D10=MargemPotencial%, F10=MarkupPotencial
-    const custoConf   = N(rB[4]?.[1] || 0);  // B5 = row index 4, col index 1
-    const margemReal  = N(rB[4]?.[3] || 0);  // D5 = row index 4, col index 3
-    const markupReal  = N(rB[4]?.[5] || 0);  // F5 = row index 4, col index 5
-    const margemPot   = N(rB[9]?.[3] || 0);  // D10 = row index 9, col index 3
-    const markupPot   = N(rB[9]?.[5] || 0);  // F10 = row index 9, col index 5
+    const custoConf   = N(rB[4]?.[1] || 0);
+    let margemReal    = N(rB[4]?.[3] || 0); if(margemReal>1) margemReal=margemReal/100;
+    const markupReal  = N(rB[4]?.[5] || 0);
+    let margemPot     = N(rB[9]?.[3] || 0); if(margemPot>1) margemPot=margemPot/100;
+    const markupPot   = N(rB[9]?.[5] || 0);
     S.resumo={
       custoGrama:    N(rP[1]?.[0]||0.09),
       custoChaveiro: N(rP[3]?.[0]||0.37),
@@ -573,7 +573,7 @@ function showEditModal(){
     <div class="modal">
       <div class="mhdr"><h3>${mode==="new"?"Novo Pedido":"Editar Pedido"}</h3><button class="mcls" onclick="closeModal('edit-modal')">✕</button></div>
       <div class="fgrid">
-        <div><label class="flbl">Data *</label><input class="finp" type="date" value="${ped["Data Venda"]||""}" onchange="S.editModal.ped['Data Venda']=this.value"/></div>
+        <div><label class="flbl">Data *</label><input class="finp" type="date" value="${fmtDate(ped["Data Venda"]||"")||""}" onchange="S.editModal.ped['Data Venda']=this.value"/></div>
         <div><label class="flbl">Cliente *</label><input class="finp" type="text" value="${ped.Pessoa||""}" oninput="S.editModal.ped.Pessoa=this.value"/></div>
         <div class="full"><label class="flbl">Produto *</label>
           <select class="fsel" onchange="onProdutoChange(this.value)"><option value="">Selecione...</option>${skuOpts}</select></div>
@@ -621,17 +621,45 @@ async function salvarPedido(){
         ped["Data Venda"],  // A - Data Venda
         ped.Pessoa,          // B - Pessoa
         ped["Impressão"],    // C - Impressão
-        "",                  // D - Família (FÓRMULA - deixa vazio)
+        "",                  // D - Família (FÓRMULA)
         ped.Cor,             // E - Cor
         ped.Realizado,       // F - Realizado
         ped.Entregue,        // G - Entregue
         ped.Pago,            // H - Pago
-        "",                  // I - Check (FÓRMULA - deixa vazio)
-        "",                  // J - Data Pag (vazio)
+        "",                  // I - Check (FÓRMULA)
+        "",                  // J - Data Pag
         qtd,                 // K - Qtdd
         pr,                  // L - Preço unitário
       ];
-      await appendSheet(SHEET_ID,"Pedidos!A:L",row);
+      // 1. Append the new row
+      const appendRes = await fetch(
+        "https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"/values/"+encodeURIComponent("Pedidos!A:L")+":append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&includeValuesInResponse=true",
+        {method:"POST",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:JSON.stringify({values:[row]})}
+      );
+      const appendData = await appendRes.json();
+      // 2. Get the new row number from response
+      const updRange = appendData?.updates?.updatedRange||"";
+      const newRowMatch = updRange.match(/(\d+)$/);
+      if(newRowMatch){
+        const newRow = parseInt(newRowMatch[1]);
+        const prevRow = newRow - 1;
+        // 3. Copy formula from D(col4) of previous row to new row
+        await Promise.all([
+          fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"/values/"+encodeURIComponent("Pedidos!D"+prevRow)+"?valueInputOption=USER_ENTERED",
+            {method:"GET",headers:{Authorization:"Bearer "+gToken}}
+          ).then(r=>r.json()).then(async d=>{
+            // Get formula from prev row
+            const fRes = await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"?ranges=Pedidos!D"+prevRow+"&fields=sheets.data.rowData.values.userEnteredValue",
+              {headers:{Authorization:"Bearer "+gToken}});
+            const fData = await fRes.json();
+            const formula = fData?.sheets?.[0]?.data?.[0]?.rowData?.[0]?.values?.[0]?.userEnteredValue?.formulaValue;
+            if(formula){
+              await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"/values/"+encodeURIComponent("Pedidos!D"+newRow)+"?valueInputOption=USER_ENTERED",
+                {method:"PUT",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:JSON.stringify({values:[[formula]]})});
+            }
+          }).catch(()=>{}),
+        ]);
+      }
     }else{
       // Edição: atualiza por blocos individuais, pulando D, I, M, N (fórmulas)
       const rowNum=ped._rowNum;
@@ -758,335 +786,106 @@ function pgProdutos(){
     <div class="skugrid">${cards||`<div style="padding:32px;text-align:center;color:#9ca3af">Nenhum produto encontrado</div>`}</div>`;
 }
 
-// ─── FINANCEIRO ───────────────────────────────────────────────────────────────
+// ─── FINANCEIRO ──────────────────────────────────────────────────────────────
 function pgFin(){
   if(S.lP) return load("Carregando...");
   if(S.eP) return err(S.eP,"loadPed");
-  // Same logic as CARD2: F=Sim, G=Sim|Não, H=Sim → col M
-  const okPeds=S.pedidos.filter(p=>p.Realizado==="Sim"&&["Sim","Não"].includes(p.Entregue)&&p.Pago==="Sim");
-  const vOK=okPeds.reduce((s,p)=>s+N(p.Valor),0);
-  const saldo=vOK-TOT_INV;
-  // Por categoria
-  const pf={};
-  okPeds.forEach(p=>{pf[p.Familia]=(pf[p.Familia]||0)+N(p.Valor);});
-  // Top produtos
-  const pp={};
-  okPeds.forEach(p=>{pp[p["Impressão"]]=(pp[p["Impressão"]]||0)+N(p.Valor);});
-  const topProd=Object.entries(pp).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  return`
-    <h2>📊 Financeiro</h2>
-    <p class="sub">Investimentos, receita e resultado</p>
-    <div class="kgrid">
-      ${kpi("Total Investido",R(TOT_INV),null,"#ef4444")}
-      ${kpi("Receita Confirmada",R(vOK),"F=Sim H=Sim · col M","#4f46e5")}
-      ${kpi("Saldo",R(saldo),saldo<0?"A recuperar":"Lucro","#16a34a")}
-      ${kpi("Payback",`${Math.min((vOK/TOT_INV)*100,100).toFixed(0)}%`,null,"#d97706")}
-    </div>
-    <div class="twocol">
-      <div class="card">
-        <h3>Detalhamento do Investimento</h3>
-        ${Object.entries(INVEST).map(([k,v])=>{
-          const c={Equipamentos:"#ef4444",Instrumentos:"#f59e0b",Insumos:"#10b981",Filamentos:"#4f46e5"}[k];
-          return`<div class="irow"><div><span class="idot" style="background:${c}"></span>${k}</div><strong>${R(v)}</strong></div>`;
-        }).join("")}
-        <div class="irow" style="border:none;font-weight:900;font-size:13px"><span>Total</span><span style="color:#ef4444">${R(TOT_INV)}</span></div>
-      </div>
-      <div class="card">
-        <h3>Receita por Categoria (F=Sim H=Sim)</h3>
-        ${Object.entries(pf).sort((a,b)=>b[1]-a[1]).map(([f,v])=>`<div style="margin-bottom:9px">
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>${f||"—"}</span><span style="font-weight:700;color:${COR_TIPO[f]||"#4f46e5"}">${R(v)}</span></div>
-          <div style="background:#f3f4f6;border-radius:20px;height:5px"><div style="width:${(v/vOK)*100}%;background:${COR_TIPO[f]||"#4f46e5"};height:100%;border-radius:20px"></div></div>
-        </div>`).join("")}
-      </div>
-    </div>
-    <div class="card" style="margin-top:14px">
-      <h3>🏆 Produtos Mais Vendidos</h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:8px">
-        ${topProd.map(([nome,val],i)=>`<div style="background:#f9fafb;border-radius:10px;padding:10px 13px;display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-size:10px;color:#9ca3af">#${i+1}</div>
-            <div style="font-size:13px;font-weight:700;color:#111827;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</div>
-          </div>
-          <div style="font-weight:900;color:#4f46e5;font-size:14px">${R(val)}</div>
-        </div>`).join("")}
-      </div>
-    </div>`;
-}
-
-// ─── CONSIGNAÇÃO ──────────────────────────────────────────────────────────────
-function pgConsig(){
-  if(S.lC) return load("Carregando consignação...");
-  if(S.eC) return err(S.eC,"loadCon");
-  const sel=S.consigSel||"todos";
-  const parc=[...new Set(S.consig.map(c=>c.Local||""))].filter(Boolean);
-  const fil=sel==="todos"?S.consig:S.consig.filter(c=>(c.Local||"")===sel);
-  const totAD=fil.reduce((s,c)=>s+N(c["Preço AD"])*N(c.Quantidade),0);
-  const totV=fil.reduce((s,c)=>s+N(c["Preço AD"])*N(c["Quantidade Vendida"]),0);
-  const totE=fil.reduce((s,c)=>s+N(c["Estoque Atual"]),0);
-  const rows=fil.map((c,i)=>{
-    const est=N(c["Estoque Atual"]),vend=N(c["Quantidade Vendida"]);
-    return`<tr>
-      <td style="font-weight:600">${c.Local||""}</td>
-      <td>${c["Impressão"]||""}</td>
-      <td style="color:#6b7280">${c.Cor||""}</td>
-      <td style="text-align:center">${c.Quantidade||""}</td>
-      <td style="font-weight:600">${R(c["Preço AD"]||0)}</td>
-      <td style="color:#d97706;font-weight:600">${R(c["Preço Sugerido"]||0)}</td>
-      <td style="text-align:center;font-weight:800;color:${vend>0?"#16a34a":"#9ca3af"}">${vend}</td>
-      <td style="text-align:center;font-weight:800;color:${est<=1?"#d97706":"#374151"}">${est}</td>
-      <td>${est===0?T("REPOR","red"):est<=2?T("Baixo","yellow"):T("OK","green")}</td>
-    </tr>`;
-  }).join("");
-  return`
-    <h2>🤝 Consignação</h2>
-    <p class="sub">${parc.length} parceiros · Fechamento dia 30</p>
-    <div class="fbar">${["todos",...parc].map(p=>`<button class="fbtn${sel===p?" on":""}" onclick="S.consigSel='${p}';render()">${p==="todos"?"Todos":p}</button>`).join("")}</div>
-    <div class="ccards">
-      ${[["Em consignação (AD)",R(totAD),"#4f46e5"],["Já vendido",R(totV),"#16a34a"],["Estoque total",totE+" un.","#d97706"]].map(([l,v,c])=>`<div class="ccard" style="border-top:3px solid ${c}"><div class="kl" style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase">${l}</div><div style="font-size:18px;font-weight:900;margin-top:2px;color:${c}">${v}</div></div>`).join("")}
-    </div>
-    <div class="twrap"><div class="tscroll">
-      <table><thead><tr>${["Parceiro","Produto","Cor","Qtd","P.AD","P.Sug.","Vendido","Estoque","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-      <tbody>${rows||`<tr><td colspan="9" style="padding:28px;text-align:center;color:#9ca3af">Sem dados</td></tr>`}</tbody></table>
-    </div></div>`;
-}
-
-// ─── APP PARCEIRO (somente visualização) ──────────────────────────────────────
-function pgParceiro(){
-  const parc=S.parcSel;
-  const est=S.consig.filter(c=>(c.Local||"")===parc);
-  const totAD=est.reduce((s,c)=>s+N(c["Preço AD"])*N(c.Quantidade),0);
-  const totVend=est.reduce((s,c)=>s+N(c["Preço AD"])*N(c["Quantidade Vendida"]),0);
-  const totEst=est.reduce((s,c)=>s+N(c["Estoque Atual"]),0);
-  const qtdVend=est.reduce((s,c)=>s+N(c["Quantidade Vendida"]),0);
-  // Histórico mensal
-  const pm={};
-  S.pedidos.filter(p=>p.Pago==="Sim").forEach(p=>{
-    const mes=String(p.Mes||"").trim(),ano=String(p.Ano||"").trim();
-    const nome=p.Pessoa||"";
-    if(!mes||!nome.toLowerCase().includes(parc.toLowerCase().split(" ")[0].toLowerCase()))return;
-    const k=`${mes}/${ano||"2026"}`;
-    if(!pm[k])pm[k]={tot:0,qtd:0};
-    pm[k].tot+=N(p.Valor);pm[k].qtd+=N(p.Qtdd)||1;
-  });
-  const me=Object.entries(pm);
-  const mx=Math.max(...me.map(([,v])=>v.tot),1);
-  const stItems=est.length?est.map(c=>{
-    const e=N(c["Estoque Atual"]),vd=N(c["Quantidade Vendida"]);
-    return`<div class="si" style="background:${e<=2?"#fffbeb":"#f9fafb"};${e<=2?"border:1px solid #fcd34d":""}">
-      <div class="si-name"><div style="font-size:13px;font-weight:700">${c["Impressão"]||""}</div><div style="font-size:11px;color:#6b7280">${c.Cor||""}</div></div>
-      <div class="si-pill" style="background:${e<=2?"#fef3c7":"#f0fdf4"}"><div class="pv" style="color:${e<=2?"#d97706":"#16a34a"}">${e}</div><div class="pl">estoque</div></div>
-      <div class="si-pill" style="background:#eef2ff"><div class="pv" style="color:#4f46e5;font-size:14px">${vd}</div><div class="pl">vendido</div></div>
-      <div class="si-pill" style="background:#f0fdf4"><div class="pv" style="color:#15803d;font-size:13px">${R(N(c["Preço AD"]))}</div><div class="pl">preço AD</div></div>
-      <div class="si-pill" style="background:#ede9fe"><div class="pv" style="color:#5b21b6;font-size:13px">${R(N(c["Preço Sugerido"]))}</div><div class="pl">p. sugerido</div></div>
-    </div>`;
-  }).join(""):`<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px">Sem dados de consignação para este parceiro</div>`;
-  return`
-    <div class="ph"><div class="pre">Portal do Parceiro</div><h2>${parc}</h2><p>Visualização de estoque · Fechamento dia 30 · PIX: 376.844.548-89</p></div>
-    <div class="fbar">${Object.keys(S.parceiros).map(p=>`<button class="fbtn${parc===p?" on":""}" onclick="S.parcSel='${p}';render()">${p}</button>`).join("")}</div>
-    <div class="ccards">
-      ${[["Em consignação",R(totAD),"#4f46e5"],["Já vendido",R(totVend),"#16a34a"],["Estoque",totEst+" un.","#d97706"],["Qtd vendida",qtdVend+" peças","#7c3aed"]].map(([l,v,c])=>`<div class="ccard" style="border-top:3px solid ${c}"><div class="kl" style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase">${l}</div><div style="font-size:18px;font-weight:900;margin-top:2px;color:${c}">${v}</div></div>`).join("")}
-    </div>
-    ${me.length?`<div class="chart" style="margin-bottom:16px"><h3>📈 Histórico de Vendas — ${parc}</h3><div class="bars">${me.map(([m,v])=>`<div class="bc"><div class="bv">${v.qtd}un</div><div class="bar" style="height:${(v.tot/mx)*75}px"></div><div class="bl">${m}</div></div>`).join("")}</div><div style="font-size:12px;color:#6b7280;border-top:1px solid #f3f4f6;padding-top:8px;margin-top:8px">Total: <strong style="color:#4f46e5">${R(me.reduce((s,[,v])=>s+v.tot,0))}</strong> · Peças: <strong style="color:#7c3aed">${me.reduce((s,[,v])=>s+v.qtd,0)}</strong></div></div>`:`<div class="card" style="margin-bottom:16px;text-align:center;color:#9ca3af;font-size:13px;padding:20px">Sem histórico para este parceiro</div>`}
-    <div class="card">
-      <h3 style="margin-bottom:6px">📦 Estoque + Preços</h3>
-      <div style="font-size:11px;color:#9ca3af;margin-bottom:12px">Estoque atual · Vendido · Preço AD · Preço sugerido</div>
-      ${S.lC?load("Carregando..."):stItems}
-      <div class="pixbox"><strong style="color:#15803d">💰 Fechamento Mensal</strong><br>Todo dia 30 · PIX: <strong>376.844.548-89</strong><br>Eduardo Perez Marcelo · Bradesco</div>
-    </div>`;
-}
-
-// ─── GERENCIAR PARCEIROS ──────────────────────────────────────────────────────
-function pgGerenciar(){
-  return`
-    <h2>⚙️ Gerenciar Parceiros</h2>
-    <p class="sub">Adicione ou remova parceiros de consignação</p>
-    <div class="card" style="margin-bottom:16px">
-      <h3>Parceiros Ativos</h3>
-      ${Object.entries(S.parceiros).map(([nome,id])=>`
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border-radius:10px;margin-bottom:8px">
-          <div style="flex:1"><div style="font-weight:700;font-size:13px">${nome}</div><div style="font-size:11px;color:#9ca3af;font-family:monospace">${id.slice(0,28)}...</div></div>
-          <button onclick="removerParceiro('${nome}')" style="padding:4px 10px;border-radius:7px;border:none;background:#fee2e2;color:#991b1b;font-weight:700;cursor:pointer;font-size:11px;font-family:inherit">Remover</button>
-        </div>`).join("")}
-    </div>
-    <div class="card">
-      <h3 style="margin-bottom:14px">➕ Adicionar Novo Parceiro</h3>
-      <div style="background:#fef3c7;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12px;color:#92400e">
-        1. Duplique uma planilha de parceiro no Google Drive<br>
-        2. Compartilhe como "Qualquer pessoa com o link pode editar"<br>
-        3. Cole o ID ou URL da nova planilha abaixo
-      </div>
-      <div class="fgrid">
-        <div><label class="flbl">Nome do Parceiro *</label><input id="np-n" class="finp" placeholder="Ex: Loja da Maria"/></div>
-        <div><label class="flbl">ID ou URL da Planilha *</label><input id="np-i" class="finp" placeholder="1BxrGwTV535... ou URL completa"/></div>
-      </div>
-      <button onclick="adicionarParceiro()" class="btn-pri" style="margin-top:14px">Salvar Parceiro</button>
-    </div>`;
-}
-function adicionarParceiro(){
-  const nome=document.getElementById("np-n")?.value?.trim();
-  const id=document.getElementById("np-i")?.value?.trim();
-  if(!nome||!id){alert("Preencha nome e ID.");return;}
-  const m=id.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  S.parceiros[nome]=m?m[1]:id;
-  try{localStorage.setItem("amalello_parc",JSON.stringify(S.parceiros));}catch(e){}
-  alert(`Parceiro "${nome}" adicionado!`);render();
-}
-function removerParceiro(nome){
-  if(!confirm(`Remover "${nome}"?`))return;
-  delete S.parceiros[nome];
-  try{localStorage.setItem("amalello_parc",JSON.stringify(S.parceiros));}catch(e){}
-  render();
-}
-
-// ─── LOGIN + APP SHELL ────────────────────────────────────────────────────────
-function showLogin(){
-  document.getElementById("body").innerHTML=`
-    <div class="login-wrap">
-      <div class="login-box">
-        <div style="width:64px;height:64px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:18px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;font-size:28px">🖨️</div>
-        <h1 style="color:#fff;font-weight:900;font-size:28px;margin:0 0 8px;letter-spacing:-.03em">Amalello Design</h1>
-        <p style="color:#71717a;font-size:14px;margin:0 0 36px">Sistema de gestão · Impressão 3D</p>
-        <button onclick="doLogin()" style="width:100%;padding:14px;border-radius:12px;border:none;background:#4f46e5;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px">
-          <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.7C34.7 33.9 30 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></svg>
-          Entrar com Google
-        </button>
-        <p style="color:#52525b;font-size:12px;margin-top:20px">Acesso restrito · Eduardo & Isabela</p>
-      </div>
-    </div>`;
-}
-
-function showApp(){
-  document.getElementById("body").innerHTML=`
-    <div class="sb">
-      <div class="sb-logo">
-        <h1>Amalello</h1><p>Design · Impressão 3D</p>
-        <div class="sb-sync" id="sync-lbl" style="display:none">🟢 <span id="sync-time"></span></div>
-      </div>
-      <div class="sb-nav" id="nav"></div>
-      <div class="sb-ft">
-        <button class="sync-btn" onclick="loadAll()">🔄 Sincronizar planilhas</button>
-        <div class="user-box">
-          <div style="color:#3f3f46;font-size:10px;font-weight:700;text-transform:uppercase">Admin</div>
-          <div id="user-info" style="color:#a1a1aa;font-size:12px;margin-top:2px"></div>
-          <div style="color:#3f3f46;font-size:10px;margin-top:3px">🔗 Google Sheets · OAuth</div>
-        </div>
-      </div>
-    </div>
-    <div class="ct"><div class="ci" id="app"></div></div>`;
-  try{const p=localStorage.getItem("amalello_parc");if(p)S.parceiros={...JSON.parse(p)};}catch(e){}
-  render();
-  setTimeout(loadAll,500);
-}
-
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-showLogin();
-initAuth();
-</script>
-</body>
-</html>// ─── FINANCEIRO ──────────────────────────────────────────────────────────────
-function pgFin(){
-  if(S.lP) return load("Carregando...");
-  if(S.eP) return err(S.eP,"loadPed");
-  // Dynamic investment totals from sheet
-  const dynInvest={
+  var dynInvest={
     Equipamentos:S.resumo.totalEquip||6500,
     Instrumentos:S.resumo.totalInstr||251.03,
     Insumos:S.resumo.totalInsumos||478.31,
     Filamentos:S.resumo.totalFilamentos||3803.06,
   };
-  const dynTotInv=Object.values(dynInvest).reduce((a,b)=>a+b,0);
-  // F=Sim, G=Sim|Não, H=Sim → col M
-  const okPeds=S.pedidos.filter(p=>p.Realizado==="Sim"&&["Sim","Não"].includes(p.Entregue)&&p.Pago==="Sim");
-  const vOK=okPeds.reduce((s,p)=>s+N(p.Valor),0);
-  const saldo=vOK-dynTotInv;
-  // Por categoria
-  const pf={};
-  okPeds.forEach(p=>{pf[p.Familia]=(pf[p.Familia]||0)+N(p.Valor);});
-  // Top produtos
-  const pp={};
-  okPeds.forEach(p=>{pp[p["Impressão"]]=(pp[p["Impressão"]]||0)+N(p.Valor);});
-  const topProd=Object.entries(pp).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  // Filtros dinâmicos para compradores
-  const anoSel=S._finAno||"todos";
-  const mesSel=S._finMes||"todos";
-  const anosDisp=[...new Set(S.pedidos.map(p=>String(p.Ano||"")).filter(Boolean))].sort();
-  const mesesDisp=[...new Set(S.pedidos.map(p=>String(p.Mes||"")).filter(Boolean))];
-  const pedsFil=S.pedidos.filter(p=>p.Pago==="Sim"&&
-    (anoSel==="todos"||String(p.Ano||"")===anoSel)&&
-    (mesSel==="todos"||String(p.Mes||"")===mesSel));
-  const pc={};
-  pedsFil.forEach(p=>{
-    const nome=p.Pessoa||"";if(!nome)return;
+  var dynTotInv=Object.values(dynInvest).reduce(function(a,b){return a+b;},0);
+  var okPeds=S.pedidos.filter(function(p){return p.Realizado==="Sim"&&["Sim","Não"].includes(p.Entregue)&&p.Pago==="Sim";});
+  var vOK=okPeds.reduce(function(s,p){return s+N(p.Valor);},0);
+  var saldo=vOK-dynTotInv;
+  var pf={};
+  okPeds.forEach(function(p){pf[p.Familia]=(pf[p.Familia]||0)+N(p.Valor);});
+  var pp={};
+  okPeds.forEach(function(p){pp[p["Impressão"]]=(pp[p["Impressão"]]||0)+N(p.Valor);});
+  var topProd=Object.entries(pp).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+  var anoSel=S._finAno||"todos";
+  var mesSel=S._finMes||"todos";
+  var anosDisp=[...new Set(S.pedidos.map(function(p){return String(p.Ano||"");}).filter(Boolean))].sort();
+  var mesesDisp=[...new Set(S.pedidos.map(function(p){return String(p.Mes||"");}).filter(Boolean))];
+  var pedsFil=S.pedidos.filter(function(p){
+    return p.Pago==="Sim"&&
+      (anoSel==="todos"||String(p.Ano||"")===anoSel)&&
+      (mesSel==="todos"||String(p.Mes||"")===mesSel);
+  });
+  var pc={};
+  pedsFil.forEach(function(p){
+    var nome=p.Pessoa||"";if(!nome)return;
     if(!pc[nome])pc[nome]={total:0,qtd:0,pedidos:0};
     pc[nome].total+=N(p.Valor);pc[nome].qtd+=N(p.Qtdd)||1;pc[nome].pedidos++;
   });
-  const topComp=Object.entries(pc).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
-  const pct=v=>v?(N(v)*100).toFixed(1)+"%":"—";
-  const mx=v=>v?"×"+N(v).toFixed(2):"—";
-  return`
-    <h2>📊 Financeiro</h2>
-    <p class="sub">Investimentos, receita e resultado</p>
-    <div class="kgrid">
-      ${kpi("Total Investido",R(dynTotInv),"Lido das abas da planilha","#ef4444")}
-      ${kpi("Receita Confirmada",R(vOK),"F=Sim H=Sim · col M","#4f46e5")}
-      ${kpi("Custo Confirmado",R(S.resumo.custoConf),"Resumo B5","#dc2626")}
-      ${kpi("Margem Real %",pct(S.resumo.margemReal),"Resumo D5","#059669")}
-      ${kpi("Markup Real",mx(S.resumo.markupReal),"Resumo F5","#7c3aed")}
-      ${kpi("Saldo",R(saldo),saldo<0?"A recuperar":"Lucro","#16a34a")}
-      ${kpi("Payback",`${Math.min((vOK/dynTotInv)*100,100).toFixed(0)}%`,null,"#d97706")}
-      ${kpi("Margem Potencial %",pct(S.resumo.margemPot),"Resumo D10","#0891b2")}
-      ${kpi("Markup Potencial",mx(S.resumo.markupPot),"Resumo F10","#db2777")}
-    </div>
-    <div class="twocol">
-      <div class="card">
-        <h3>Detalhamento do Investimento <span style="font-size:10px;color:#9ca3af;font-weight:400">(lido da planilha)</span></h3>
-        ${Object.entries(dynInvest).map(([k,v])=>{
-          const c={Equipamentos:"#ef4444",Instrumentos:"#f59e0b",Insumos:"#10b981",Filamentos:"#4f46e5"}[k];
-          return`<div class="irow"><div><span class="idot" style="background:${c}"></span>${k}</div><strong>${R(v)}</strong></div>`;
-        }).join("")}
-        <div class="irow" style="border:none;font-weight:900;font-size:13px"><span>Total</span><span style="color:#ef4444">${R(dynTotInv)}</span></div>
-      </div>
-      <div class="card">
-        <h3>Receita por Categoria (F=Sim H=Sim)</h3>
-        ${Object.entries(pf).sort((a,b)=>b[1]-a[1]).map(([f,v])=>`<div style="margin-bottom:9px">
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>${f||"—"}</span><span style="font-weight:700;color:${COR_TIPO[f]||"#4f46e5"}">${R(v)}</span></div>
-          <div style="background:#f3f4f6;border-radius:20px;height:5px"><div style="width:${(v/vOK)*100}%;background:${COR_TIPO[f]||"#4f46e5"};height:100%;border-radius:20px"></div></div>
-        </div>`).join("")}
-      </div>
-    </div>
-    <div class="card" style="margin-top:14px">
-      <h3>🏆 Produtos Mais Vendidos</h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:8px">
-        ${topProd.map(([nome,val],i)=>`<div style="background:#f9fafb;border-radius:10px;padding:10px 13px;display:flex;justify-content:space-between;align-items:center">
-          <div><div style="font-size:10px;color:#9ca3af">#${i+1}</div><div style="font-size:13px;font-weight:700;color:#111827;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</div></div>
-          <div style="font-weight:900;color:#4f46e5;font-size:14px">${R(val)}</div>
-        </div>`).join("")}
-      </div>
-    </div>
-    <div class="card" style="margin-top:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
-        <h3 style="margin:0">🏆 Pessoas que Mais Compraram</h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <select style="padding:6px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:12px;font-family:inherit;background:#fff" onchange="S._finAno=this.value;render()">
-            <option value="todos">Todos os anos</option>
-            ${anosDisp.map(a=>`<option value="${a}" ${anoSel===a?"selected":""}>${a}</option>`).join("")}
-          </select>
-          <select style="padding:6px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:12px;font-family:inherit;background:#fff" onchange="S._finMes=this.value;render()">
-            <option value="todos">Todos os meses</option>
-            ${mesesDisp.map(m=>`<option value="${m}" ${mesSel===m?"selected":""}>${m}</option>`).join("")}
-          </select>
-        </div>
-      </div>
-      ${topComp.length?topComp.map(([nome,d],i)=>`
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:${i===0?"#fffbeb":i===1?"#f9fafb":i===2?"#fef2f2":"#f9fafb"};border-radius:10px;margin-bottom:8px">
-          <div style="width:28px;height:28px;border-radius:50%;background:${i===0?"#d97706":i===1?"#9ca3af":i===2?"#b45309":"#e5e7eb"};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:${i<3?"#fff":"#6b7280"}">${i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}</div>
-          <div style="flex:1">
-            <div style="font-weight:700;font-size:13px;color:#111827">${nome}</div>
-            <div style="font-size:11px;color:#6b7280">${d.pedidos} pedido(s) · ${Math.round(d.qtd)} peças</div>
-          </div>
-          <div style="font-weight:900;font-size:15px;color:#4f46e5">${R(d.total)}</div>
-        </div>`).join(""):`<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px">Nenhum dado para o período selecionado</div>`}
-    </div>`;
+  var topComp=Object.entries(pc).sort(function(a,b){return b[1].total-a[1].total;}).slice(0,10);
+  function pct(v){return v?(N(v)*100).toFixed(1)+"%" :"—";}
+  function mxp(v){return v?"×"+N(v).toFixed(2):"—";}
+  var html="";
+  html+='<h2>📊 Financeiro</h2>';
+  html+='<p class="sub">Investimentos, receita e resultado</p>';
+  html+='<div class="kgrid">';
+  html+=kpi("Total Investido",R(dynTotInv),"Lido das abas da planilha","#ef4444");
+  html+=kpi("Receita Confirmada",R(vOK),"F=Sim H=Sim · col M","#4f46e5");
+  html+=kpi("Custo Confirmado",R(S.resumo.custoConf),"Resumo B5","#dc2626");
+  html+=kpi("Margem Real %",pct(S.resumo.margemReal),"Resumo D5","#059669");
+  html+=kpi("Markup Real",mxp(S.resumo.markupReal),"Resumo F5","#7c3aed");
+  html+=kpi("Saldo",R(saldo),saldo<0?"A recuperar":"Lucro","#16a34a");
+  html+=kpi("Payback",Math.min((vOK/dynTotInv)*100,100).toFixed(0)+"%",null,"#d97706");
+  html+=kpi("Margem Potencial %",pct(S.resumo.margemPot),"Resumo D10","#0891b2");
+  html+=kpi("Markup Potencial",mxp(S.resumo.markupPot),"Resumo F10","#db2777");
+  html+="</div>";
+  html+='<div class="twocol">';
+  html+='<div class="card"><h3>Detalhamento do Investimento <span style="font-size:10px;color:#9ca3af;font-weight:400">(da planilha)</span></h3>';
+  Object.entries(dynInvest).forEach(function(e){
+    var c={Equipamentos:"#ef4444",Instrumentos:"#f59e0b",Insumos:"#10b981",Filamentos:"#4f46e5"}[e[0]];
+    html+='<div class="irow"><div><span class="idot" style="background:'+c+'"></span>'+e[0]+'</div><strong>'+R(e[1])+'</strong></div>';
+  });
+  html+='<div class="irow" style="border:none;font-weight:900;font-size:13px"><span>Total</span><span style="color:#ef4444">'+R(dynTotInv)+'</span></div></div>';
+  html+='<div class="card"><h3>Receita por Categoria (F=Sim H=Sim)</h3>';
+  Object.entries(pf).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
+    html+='<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>'+(e[0]||"—")+'</span><span style="font-weight:700;color:'+(COR_TIPO[e[0]]||"#4f46e5")+'">'+R(e[1])+'</span></div>';
+    html+='<div style="background:#f3f4f6;border-radius:20px;height:5px"><div style="width:'+((e[1]/vOK)*100)+'%;background:'+(COR_TIPO[e[0]]||"#4f46e5")+';height:100%;border-radius:20px"></div></div></div>';
+  });
+  html+='</div></div>';
+  html+='<div class="card" style="margin-top:14px"><h3>🏆 Produtos Mais Vendidos</h3>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:8px">';
+  topProd.forEach(function(e,i){
+    html+='<div style="background:#f9fafb;border-radius:10px;padding:10px 13px;display:flex;justify-content:space-between;align-items:center">';
+    html+='<div><div style="font-size:10px;color:#9ca3af">#'+(i+1)+'</div><div style="font-size:13px;font-weight:700;color:#111827;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e[0]+'</div></div>';
+    html+='<div style="font-weight:900;color:#4f46e5;font-size:14px">'+R(e[1])+'</div></div>';
+  });
+  html+='</div></div>';
+  // Top compradores
+  html+='<div class="card" style="margin-top:14px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">';
+  html+='<h3 style="margin:0">🏆 Pessoas que Mais Compraram</h3>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  html+='<select style="padding:6px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:12px;font-family:inherit;background:#fff" onchange="S._finAno=this.value;render()">';
+  html+='<option value="todos">Todos os anos</option>';
+  anosDisp.forEach(function(a){html+='<option value="'+a+'"'+(anoSel===a?' selected':'')+'>'+a+'</option>';});
+  html+='</select>';
+  html+='<select style="padding:6px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:12px;font-family:inherit;background:#fff" onchange="S._finMes=this.value;render()">';
+  html+='<option value="todos">Todos os meses</option>';
+  mesesDisp.forEach(function(m){html+='<option value="'+m+'"'+(mesSel===m?' selected':'')+'>'+m+'</option>';});
+  html+='</select></div></div>';
+  if(topComp.length){
+    topComp.forEach(function(e,i){
+      var medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1);
+      var bg=i===0?"#fffbeb":i===1?"#f9fafb":i===2?"#fef2f2":"#f9fafb";
+      html+='<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:'+bg+';border-radius:10px;margin-bottom:8px">';
+      html+='<div style="width:28px;height:28px;border-radius:50%;background:'+(i===0?"#d97706":i===1?"#9ca3af":i===2?"#b45309":"#e5e7eb")+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:'+(i<3?"#fff":"#6b7280")+'">'+medal+'</div>';
+      html+='<div style="flex:1"><div style="font-weight:700;font-size:13px;color:#111827">'+e[0]+'</div>';
+      html+='<div style="font-size:11px;color:#6b7280">'+e[1].pedidos+' pedido(s) · '+Math.round(e[1].qtd)+' peças</div></div>';
+      html+='<div style="font-weight:900;font-size:15px;color:#4f46e5">'+R(e[1].total)+'</div></div>';
+    });
+  }else{
+    html+='<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px">Nenhum dado para o período selecionado</div>';
+  }
+  html+='</div>';
+  return html;
 }
 
 // ─── CONSIGNAÇÃO ──────────────────────────────────────────────────────────────
