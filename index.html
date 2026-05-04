@@ -659,8 +659,14 @@ function onProdutoChange(val){
   showEditModal();
 }
 // Called when user types in product datalist input
+let _prodTimer=null;
 function onProdutoSearch(val){
   S.editModal.ped["Impressão"]=val;
+  // Always update observacao visibility without full re-render
+  const obsField=document.getElementById("obs-custom-field");
+  const isCustom=val.toLowerCase().includes("custom");
+  if(obsField) obsField.style.display=isCustom?"block":"none";
+  // Only re-render modal (to fill família/preço) when exact SKU match found
   const sku=S.skus.find(s=>(s["Impressão"]||"")===val);
   if(sku){
     S.editModal.ped.Familia=sku.Tipo||"";
@@ -669,9 +675,19 @@ function onProdutoSearch(val){
       S.editModal.ped["Preço unitário"]=preco;
       S.editModal.ped.Valor=preco*(N(S.editModal.ped.Qtdd)||1);
     }
+    // Debounced re-render to update família/preço fields without losing focus
+    if(_prodTimer)clearTimeout(_prodTimer);
+    _prodTimer=setTimeout(()=>{
+      const inp=document.getElementById("prod-input");
+      const pos=inp?inp.selectionStart:0;
+      showEditModal();
+      // Restore focus after re-render
+      setTimeout(()=>{
+        const ni=document.getElementById("prod-input");
+        if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
+      },10);
+    },50);
   }
-  // Always re-render modal to show/hide Observação field for Custom products
-  showEditModal();
 }
 
 function showEditModal(){
@@ -695,7 +711,10 @@ function showEditModal(){
           <input class="finp" list="sku-list" id="prod-input" placeholder="Digite para buscar..." value="${ped['Impressão']||''}"
             oninput="onProdutoSearch(this.value)" style="width:100%"/>
           <datalist id="sku-list">${skuOpts}</datalist></div>
-        ${(ped["Impressão"]||"").toLowerCase().includes("custom")?`<div class="full"><label class="flbl">📝 Observação (produto Custom)</label><input class="finp" type="text" placeholder="Descrição do custom..." value="${ped.Observacao||''}" oninput="S.editModal.ped.Observacao=this.value" style="width:100%"/></div>`:''}
+        <div id="obs-custom-field" class="full" style="display:${(ped['Impressão']||'').toLowerCase().includes('custom')?'block':'none'}">
+          <label class="flbl">📝 Observação (produto Custom)</label>
+          <input class="finp" type="text" placeholder="Descrição do custom..." value="${ped.Observacao||''}" oninput="S.editModal.ped.Observacao=this.value" style="width:100%"/>
+        </div>
         <div><label class="flbl">Família</label><select class="fsel" onchange="S.editModal.ped.Familia=this.value"><option value="">—</option>${famOpts}</select></div>
         <div><label class="flbl">Cor</label>
           <input class="finp" list="cor-list" placeholder="Digite para buscar..." value="${ped.Cor||''}"
