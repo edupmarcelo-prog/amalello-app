@@ -185,7 +185,7 @@ function fmtDate(s){if(!s||s==="")return "";const st=String(s).trim();if(/^\d{4}
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let S={
-  pag:"dashboard",pedidos:[],skus:[],consig:[],cores:[],resumo:{},
+  pag:"dashboard",pedidos:[],skus:[],consig:[],cores:[],resumo:{},filtStatus:"todos",filtAno:"todos",filtMes:"todos",
   lP:false,lS:false,lC:false,eP:null,eS:null,eC:null,
   att:null,busca:"",parcSel:"Planet Kids Hair",
   tipoSel:"todos",consigSel:"todos",
@@ -340,8 +340,21 @@ function render(){
   const pages={dashboard:pgDash,pedidos:()=>pgPedidos(null),produzir:()=>pgPedidos("produzir"),entregar:()=>pgPedidos("entregar"),cobrar:()=>pgPedidos("cobrar"),leads:()=>pgPedidos("leads"),produtos:pgProdutos,consignacao:pgConsig,financeiro:pgFin,parceiro:pgParceiro,gerenciar:pgGerenciar};
   const el=document.getElementById("app");
   if(el) el.innerHTML=(pages[S.pag]||pgDash)();
+  // Restore search focus after render
+  const si=document.getElementById("search-input");
+  if(si&&document.activeElement!==si){
+    const v=si.value,len=v.length;
+    si.focus();
+    try{si.setSelectionRange(len,len);}catch(e){}
+  }
 }
-function go(p){S.pag=p;S.busca="";render();}
+let _searchTimer=null;
+function onBuscaInput(val){
+  S.busca=val;
+  if(_searchTimer)clearTimeout(_searchTimer);
+  _searchTimer=setTimeout(()=>{render();},180);
+}
+function go(p){S.pag=p;S.busca="";S.filtStatus="todos";S.filtAno="todos";S.filtMes="todos";render();}
 function renderNav(){
   const aP=S.pedidos.filter(p=>p.Realizado==="Não").length;
   const aE=S.pedidos.filter(p=>p.Realizado==="Sim"&&p.Entregue==="Não").length;
@@ -483,7 +496,17 @@ function getFilPed(filter){
     if(filter==="entregar") return bm&&p.Realizado==="Sim"&&p.Entregue==="Não";
     if(filter==="cobrar")   return bm&&(p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não";
     if(filter==="leads")    return bm&&p.Realizado==="Lead";
-    return bm;
+    // "todos" - apply Status/Ano/Mês filters
+    const anoOk=S.filtAno==="todos"||String(p.Ano||"")===S.filtAno;
+    const mesOk=S.filtMes==="todos"||String(p.Mes||"")===S.filtMes;
+    const stOk=S.filtStatus==="todos"||(
+      (S.filtStatus==="produzir"&&p.Realizado==="Não")||
+      (S.filtStatus==="entregar"&&p.Realizado==="Sim"&&p.Entregue==="Não")||
+      (S.filtStatus==="cobrar"&&(p.Entregue==="Sim"||p.Entregue==="Consignado")&&p.Pago==="Não")||
+      (S.filtStatus==="leads"&&p.Realizado==="Lead")||
+      (S.filtStatus==="ok"&&p.Pago==="Sim"&&p.Entregue==="Sim")
+    );
+    return bm&&anoOk&&mesOk&&stOk;
   });
 }
 
@@ -523,6 +546,23 @@ function pgPedidos(filter){
         </td>
       </tr>`;
     }
+    if(filter==="cobrar"){
+      return`<tr>
+        <td style="color:#6b7280">${dt}</td>
+        <td style="font-weight:600;color:#111827;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.Pessoa||""}</td>
+        <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p["Impressão"]||""}</td>
+        <td style="color:#6b7280">${p.Familia||""}</td>
+        <td style="color:#6b7280">${p.Cor||""}</td>
+        <td style="text-align:center;font-weight:700">${p.Qtdd||1}</td>
+        <td style="font-weight:800;color:#4f46e5">${R(p.Valor)}</td>
+        <td>${T(p.Pago||"?",p.Pago==="Sim"?"green":p.Pago==="Brinde"?"orange":"yellow")}</td>
+        <td>${bt(p)}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-sm" onclick="openEdit(${i},'${filter||""}')">✏️</button>
+          <button class="btn-view" onclick="openDet(${i},'${filter||""}')">Ver</button>
+        </td>
+      </tr>`;
+    }
     return`<tr>
       <td style="color:#6b7280">${dt}</td>
       <td style="font-weight:600;color:#111827;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.Pessoa||""}</td>
@@ -542,15 +582,32 @@ function pgPedidos(filter){
       </td>
     </tr>`;
   }).join("");
+  const isCobrar=filter==="cobrar";
   const leadsHeaders=["Data","Cliente","Produto","Observação","Fam.","Cor","Qtd","Valor","Realizado",""];
+  const cobrarHeaders=["Data","Cliente","Produto","Fam.","Cor","Qtd","Valor","Pago","Status",""];
   const normHeaders=["Data","Cliente","Produto","Fam.","Cor","Qtd","Valor","Recebido","Realiz.","Entreg.","Pago","Status",""];
-  const headers=isLeads?leadsHeaders:normHeaders;
-  const colspan=isLeads?10:13;
+  const headers=isLeads?leadsHeaders:isCobrar?cobrarHeaders:normHeaders;
+  const colspan=isLeads?10:isCobrar?10:13;
   return`
     <h2>${titulo}</h2>
     <p class="sub">${fil.length} pedido(s) · ${R(totV)}</p>
+    ${!filter?`<div class="fbar" style="margin-bottom:10px">
+      <select style="padding:6px 11px;border-radius:8px;border:1px solid #d1d5db;font-size:12px;font-family:inherit;background:#fff" onchange="S.filtStatus=this.value;render()">
+        <option value="todos">Todos os status</option>
+        ${[["produzir","🖨️ Produzir"],["entregar","📦 Entregar"],["cobrar","💸 Cobrar"],["leads","🎯 Leads"],["ok","✅ OK"]].map(([v,l])=>`<option value="${v}"${S.filtStatus===v?" selected":""}>${l}</option>`).join("")}
+      </select>
+      <select style="padding:6px 11px;border-radius:8px;border:1px solid #d1d5db;font-size:12px;font-family:inherit;background:#fff" onchange="S.filtAno=this.value;render()">
+        <option value="todos">Todos os anos</option>
+        ${[...new Set(S.pedidos.map(p=>String(p.Ano||"")).filter(Boolean))].sort().map(a=>`<option value="${a}"${S.filtAno===a?" selected":""}>${a}</option>`).join("")}
+      </select>
+      <select style="padding:6px 11px;border-radius:8px;border:1px solid #d1d5db;font-size:12px;font-family:inherit;background:#fff" onchange="S.filtMes=this.value;render()">
+        <option value="todos">Todos os meses</option>
+        ${[...new Set(S.pedidos.map(p=>String(p.Mes||"")).filter(Boolean))].map(m=>`<option value="${m}"${S.filtMes===m?" selected":""}>${m}</option>`).join("")}
+      </select>
+      ${S.filtStatus!=="todos"||S.filtAno!=="todos"||S.filtMes!=="todos"?`<button onclick="S.filtStatus='todos';S.filtAno='todos';S.filtMes='todos';render()" style="padding:6px 12px;border-radius:8px;border:none;background:#fee2e2;color:#991b1b;cursor:pointer;font-size:12px;font-family:inherit;font-weight:600">✕ Limpar filtros</button>`:''}
+    </div>`:""}
     <div class="sbar">
-      <input class="sinp" placeholder="Buscar cliente ou produto..." value="${S.busca}" oninput="S.busca=this.value;render()"/>
+      <input id="search-input" class="sinp" placeholder="Buscar cliente ou produto..." value="${S.busca}" oninput="onBuscaInput(this.value)"/>
       <button class="btn-pri" onclick="openNew()">+ Novo Pedido</button>
     </div>
     <div class="twrap"><div class="tscroll">
@@ -611,9 +668,10 @@ function onProdutoSearch(val){
       const preco=calcPrecoSugerido(val);
       S.editModal.ped["Preço unitário"]=preco;
       S.editModal.ped.Valor=preco*(N(S.editModal.ped.Qtdd)||1);
-      showEditModal();
     }
   }
+  // Always re-render modal to show/hide Observação field for Custom products
+  showEditModal();
 }
 
 function showEditModal(){
@@ -637,6 +695,7 @@ function showEditModal(){
           <input class="finp" list="sku-list" id="prod-input" placeholder="Digite para buscar..." value="${ped['Impressão']||''}"
             oninput="onProdutoSearch(this.value)" style="width:100%"/>
           <datalist id="sku-list">${skuOpts}</datalist></div>
+        ${(ped["Impressão"]||"").toLowerCase().includes("custom")?`<div class="full"><label class="flbl">📝 Observação (produto Custom)</label><input class="finp" type="text" placeholder="Descrição do custom..." value="${ped.Observacao||''}" oninput="S.editModal.ped.Observacao=this.value" style="width:100%"/></div>`:''}
         <div><label class="flbl">Família</label><select class="fsel" onchange="S.editModal.ped.Familia=this.value"><option value="">—</option>${famOpts}</select></div>
         <div><label class="flbl">Cor</label>
           <input class="finp" list="cor-list" placeholder="Digite para buscar..." value="${ped.Cor||''}"
@@ -646,8 +705,7 @@ function showEditModal(){
         <div><label class="flbl">Preço Unitário (R$)</label><input class="finp" type="number" min="0" step="0.01" value="${pr||""}" onchange="S.editModal.ped['Preço unitário']=+this.value;S.editModal.ped.Valor=(+this.value)*N(S.editModal.ped.Qtdd||1);showEditModal()"/></div>
         <div><label class="flbl">Realizado</label><select class="fsel" onchange="S.editModal.ped.Realizado=this.value">${sel("Realizado",["Sim","Não","Lead"])}</select></div>
         <div><label class="flbl">Entregue</label><select class="fsel" onchange="S.editModal.ped.Entregue=this.value">${sel("Entregue",["Sim","Não","Consignado"])}</select></div>
-        <div><label class="flbl">Pago</label><select class="fsel" onchange="S.editModal.ped.Pago=this.value;if(this.value==='Sim')S.editModal.ped['Valor Recebido']=S.editModal.ped.Valor;else S.editModal.ped['Valor Recebido']=0;showEditModal()">${sel("Pago",["Sim","Não","Brinde"])}</select></div>
-        <div><label class="flbl">Valor Recebido (R$)</label><input class="finp" type="number" min="0" step="0.01" value="${N(ped["Valor Recebido"])||""}" onchange="S.editModal.ped['Valor Recebido']=+this.value"/></div>
+        <div><label class="flbl">Pago</label><select class="fsel" onchange="S.editModal.ped.Pago=this.value;if(this.value==='Sim'){S.editModal.ped['Valor Recebido']=S.editModal.ped.Valor;S.editModal.ped['Data Pag']=today();}else{S.editModal.ped['Valor Recebido']=0;S.editModal.ped['Data Pag']='';}showEditModal()">${sel("Pago",["Sim","Não","Brinde"])}</select></div>
       </div>
       ${custoTotal>0?`<div style="margin-top:14px;background:#f0fdf4;border-radius:10px;padding:11px 16px;font-size:13px;display:flex;gap:18px;flex-wrap:wrap">
         <span>Custo est.: <strong style="color:#dc2626">${R(custoTotal)}</strong></span>
@@ -678,18 +736,18 @@ async function salvarPedido(){
       // Novo pedido: escreve A:L numa linha só, deixando vazio D(Família), I(Check), J(DataPag) — são fórmulas
       // M(Valor) e N(ValorRecebido) também são fórmulas, não precisam ser escritas
       const row=[
-        ped["Data Venda"],  // A - Data Venda
-        ped.Pessoa,          // B - Pessoa
-        ped["Impressão"],    // C - Impressão
-        "",                  // D - Família (FÓRMULA)
-        ped.Cor,             // E - Cor
-        ped.Realizado,       // F - Realizado
-        ped.Entregue,        // G - Entregue
-        ped.Pago,            // H - Pago
-        "",                  // I - Check (FÓRMULA)
-        "",                  // J - Data Pag
-        qtd,                 // K - Qtdd
-        pr,                  // L - Preço unitário
+        ped["Data Venda"],                    // A - Data Venda
+        ped.Pessoa,                            // B - Pessoa
+        ped["Impressão"],                      // C - Impressão
+        "",                                    // D - Família (FÓRMULA)
+        ped.Cor,                               // E - Cor
+        ped.Realizado,                         // F - Realizado
+        ped.Entregue,                          // G - Entregue
+        ped.Pago,                              // H - Pago
+        "",                                    // I - Check (FÓRMULA)
+        ped.Pago==="Sim"?(ped["Data Pag"]||today()):"",  // J - Data Pag
+        qtd,                                   // K - Qtdd
+        pr,                                    // L - Preço unitário
       ];
       // 1. Append the new row
       const appendRes = await fetch(
@@ -717,6 +775,10 @@ async function salvarPedido(){
           }catch(e){console.warn("copyFormCol",col,e);}
         }
         await Promise.all([copyFormCol("D"), copyFormCol("I")]);
+        // Write Q (Observação) if Custom product
+        if((ped["Impressão"]||"").toLowerCase().includes("custom")&&ped.Observacao){
+          await updateRow(SHEET_ID,"Pedidos!Q"+newRow,[ped.Observacao||""]);
+        }
       }
     }else{
       // Edição: atualiza por blocos individuais, pulando D, I, M, N (fórmulas)
@@ -726,8 +788,14 @@ async function salvarPedido(){
       await updateRow(SHEET_ID,`Pedidos!A${rowNum}:C${rowNum}`,[ped["Data Venda"],ped.Pessoa,ped["Impressão"]]);
       // E:H = Cor, Realizado, Entregue, Pago (pula D=Família e I=Check)
       await updateRow(SHEET_ID,`Pedidos!E${rowNum}:H${rowNum}`,[ped.Cor,ped.Realizado,ped.Entregue,ped.Pago]);
-      // K:L = Qtdd, Preço unitário (pula I=Check e J=DataPag)
+      // J = Data Pag (apenas se Pago=Sim)
+      if(ped.Pago==="Sim"&&(ped["Data Pag"]||"")) await updateRow(SHEET_ID,`Pedidos!J${rowNum}`,[ped["Data Pag"]||today()]);
+      // K:L = Qtdd, Preço unitário
       await updateRow(SHEET_ID,`Pedidos!K${rowNum}:L${rowNum}`,[qtd,pr]);
+      // Observação col Q (se Custom)
+      if((ped["Impressão"]||"").toLowerCase().includes("custom")&&ped.Observacao!==undefined){
+        await updateRow(SHEET_ID,`Pedidos!Q${rowNum}`,[ped.Observacao||""]);
+      }
       // NÃO escreve: D(Família), I(Check), M(Valor), N(ValorRecebido) — são fórmulas
     }
     // Clear cache for pedidos
