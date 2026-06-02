@@ -185,7 +185,7 @@ function fmtDate(s){if(!s||s==="")return "";const st=String(s).trim();if(/^\d{4}
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let S={
-  pag:"dashboard",pedidos:[],skus:[],consig:[],cores:[],resumo:{},filtStatus:"todos",filtAno:"todos",filtMes:"todos",calc:{filamento:0,tempo:0,qtd:1,isChaveiro:false,isIma:false,isMaoObra:false,adicional:0,canal:"direto",marketplace:"mercadolivre",taxaMkt:13,taxaMktCustom:0,imposto:6,embalagem:1.5,envio:0,margemDesejada:50,incImposto:true,incEmbal:true,incCartao:false,precoDesejado:0},
+  pag:"dashboard",pedidos:[],skus:[],consig:[],cores:[],resumo:{},filtStatus:"todos",filtAno:"todos",filtMes:"todos",calc:{filamento:0,tempo:0,qtd:1,isChaveiro:false,isIma:false,isMaoObra:false,adicional:0,canal:"direto",marketplace:"mercadolivre",taxaMkt:13,taxaMktCustom:0,imposto:6,embalagem:1.5,envio:0,margemDesejada:50},
   lP:false,lS:false,lC:false,eP:null,eS:null,eC:null,
   att:null,busca:"",parcSel:"Planet Kids Hair",
   tipoSel:"todos",consigSel:"todos",
@@ -353,22 +353,6 @@ function onBuscaInput(val){
   S.busca=val;
   if(_searchTimer)clearTimeout(_searchTimer);
   _searchTimer=setTimeout(()=>{render();},180);
-}
-let _calcTimer=null;
-function calcInput(field,val,clear_sku){
-  if(clear_sku)S.calc._skuNome='';
-  S.calc[field]=parseFloat(val)||0;
-  if(_calcTimer)clearTimeout(_calcTimer);
-  _calcTimer=setTimeout(()=>{
-    const active=document.activeElement;
-    const activeId=active?active.id:'';
-    const activePos=active&&active.setSelectionRange?active.selectionStart:-1;
-    render();
-    if(activeId){
-      const el=document.getElementById(activeId);
-      if(el){el.focus();if(activePos>=0)try{el.setSelectionRange(activePos,activePos);}catch(e){}}
-    }
-  },200);
 }
 function go(p){S.pag=p;S.busca="";S.filtStatus="todos";S.filtAno="todos";S.filtMes="todos";render();}
 function renderNav(){
@@ -1355,28 +1339,18 @@ function pgCalculadora(){
     return{preco:parseFloat(preco.toFixed(2)),lucro:parseFloat(lucro.toFixed(2)),margem:m*100};
   }
 
-  const embalAtivo=calc.incEmbal!==false;
-  const impostoAtivo=calc.incImposto!==false;
-  const cartaoAtivo=calc.incCartao||false;
   const canalOpts=[
-    {id:"direto",label:"Venda Direta",icon:"🤝",txMkt:0,embal:embalAtivo?v.custoEmbalDireto||1.5:0,envio:0,color:"#4f46e5",useCartao:false},
-    {id:"cartao",label:"Direto c/ Cartão",icon:"💳",txMkt:0,embal:embalAtivo?v.custoEmbalDireto||1.5:0,envio:0,color:"#7c3aed",useCartao:true},
-    {id:"mercadolivre",label:"Mercado Livre",icon:"🛒",txMkt:v.taxaMercadoLivre/100,embal:embalAtivo?v.custoEmbalDireto||1.5:0,envio:v.custoEnvioMktplace||15,color:"#d97706",useCartao:false},
-    {id:"shopee",label:"Shopee",icon:"🛍️",txMkt:v.taxaShopee/100,embal:embalAtivo?v.custoEmbalDireto||1.5:0,envio:v.custoEnvioMktplace||15,color:"#ef4444",useCartao:false},
-    {id:"outro",label:"Outro Marketplace",icon:"🌐",txMkt:v.taxaOutro/100,embal:embalAtivo?v.custoEmbalDireto||1.5:0,envio:v.custoEnvioMktplace||15,color:"#059669",useCartao:false},
+    {id:"direto",label:"Venda Direta",icon:"🤝",txMkt:0,embal:v.custoEmbalDireto||1.5,envio:0,color:"#4f46e5"},
+    {id:"cartao",label:"Direto c/ Cartão",icon:"💳",txMkt:cartao*100,embal:v.custoEmbalDireto||1.5,envio:0,color:"#7c3aed"},
+    {id:"mercadolivre",label:"Mercado Livre",icon:"🛒",txMkt:v.taxaMercadoLivre/100,embal:v.custoEmbalDireto||1.5,envio:v.custoEnvioMktplace||15,color:"#d97706"},
+    {id:"shopee",label:"Shopee",icon:"🛍️",txMkt:v.taxaShopee/100,embal:v.custoEmbalDireto||1.5,envio:v.custoEnvioMktplace||15,color:"#ef4444"},
+    {id:"outro",label:"Outro Marketplace",icon:"🌐",txMkt:v.taxaOutro/100,embal:v.custoEmbalDireto||1.5,envio:v.custoEnvioMktplace||15,color:"#059669"},
   ];
 
-  function calcPreco2(ch){
-    const txC=ch.useCartao||cartaoAtivo?cartao:0;
-    const txI=impostoAtivo?imp:0;
-    const den=1-m-ch.txMkt-txI-txC;
-    if(den<=0)return{preco:0,lucro:0};
-    const preco=(custoProd+ch.embal+ch.envio+fixo)/den;
-    const lucro=preco-custoProd-ch.embal-ch.envio-fixo-(preco*(ch.txMkt+txI+txC));
-    return{preco:parseFloat(preco.toFixed(2)),lucro:parseFloat(lucro.toFixed(2))};
-  }
-
-  const resultados=canalOpts.map(ch=>({...ch,...calcPreco2(ch)}));
+  const resultados=canalOpts.map(ch=>({...ch,...calcPreco(
+    ch.id==="cartao"?0:ch.txMkt,
+    ch.embal,ch.envio,ch.id==="direto"||ch.id==="cartao"?"direto":"mkt"
+  )}));
 
   // SKU families for filter
   const familias=[...new Set(S.skus.map(s=>s.Tipo||"").filter(Boolean))].sort();
@@ -1417,23 +1391,23 @@ function pgCalculadora(){
           <div class="fgrid">
             <div>
               <label class="flbl">Filamento (g)</label>
-              <input id="ci-fil" class="finp" type="number" min="0" step="1" value="${g||""}" placeholder="Ex: 60"
-                oninput="calcInput('filamento',this.value,true)"/>
+              <input class="finp" type="number" min="0" step="1" value="${g||""}" placeholder="Ex: 60"
+                oninput="S.calc.filamento=+this.value;S.calc._skuNome='';render()"/>
             </div>
             <div>
               <label class="flbl">Tempo (h)</label>
-              <input id="ci-tmp" class="finp" type="number" min="0" step="0.5" value="${h||""}" placeholder="Ex: 3"
-                oninput="calcInput('tempo',this.value,true)"/>
+              <input class="finp" type="number" min="0" step="0.5" value="${h||""}" placeholder="Ex: 3"
+                oninput="S.calc.tempo=+this.value;S.calc._skuNome='';render()"/>
             </div>
             <div>
               <label class="flbl">Quantidade</label>
-              <input id="ci-qtd" class="finp" type="number" min="1" step="1" value="${qtd}"
-                oninput="calcInput('qtd',this.value,false)"/>
+              <input class="finp" type="number" min="1" step="1" value="${qtd}"
+                oninput="S.calc.qtd=+this.value||1;render()"/>
             </div>
             <div>
               <label class="flbl">Custo Adicional (R$)</label>
-              <input id="ci-add" class="finp" type="number" min="0" step="0.01" value="${adicional||""}" placeholder="Ex: 2.50"
-                oninput="calcInput('adicional',this.value,false)"/>
+              <input class="finp" type="number" min="0" step="0.01" value="${adicional||""}" placeholder="Ex: 2.50"
+                oninput="S.calc.adicional=+this.value;render()"/>
             </div>
           </div>
           <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
@@ -1444,57 +1418,18 @@ function pgCalculadora(){
             ].map(([k,l])=>`<button onclick="S.calc['${k}']=!S.calc['${k}'];render()"
               style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;background:${calc[k]?"#4f46e5":"#f3f4f6"};color:${calc[k]?"#fff":"#374151"}">${l}</button>`).join("")}
           </div>
-          <div style="margin-top:10px;padding:10px;background:#f9fafb;border-radius:8px">
-            <div style="font-size:11px;color:#9ca3af;margin-bottom:7px;font-weight:700;text-transform:uppercase">Incluir nos canais de venda</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              ${[
-                ["incImposto","📋 Imposto venda"],
-                ["incEmbal","📦 Embalagem"],
-                ["incCartao","💳 Taxa cartão"],
-              ].map(([k,l])=>`<button onclick="S.calc['${k}']=!S.calc['${k}'];render()"
-                style="padding:5px 11px;border-radius:7px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;background:${calc[k]?"#4f46e5":"#e5e7eb"};color:${calc[k]?"#fff":"#374151"}">${l}</button>`).join("")}
-            </div>
-          </div>
-        </div>
-
-        <div class="card" style="background:linear-gradient(135deg,#f0fdf4,#fff);border:2px solid #bbf7d0">
-          <h3 style="margin-bottom:10px;color:#15803d">💡 Preço que Desejo Vender</h3>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:18px;font-weight:900;color:#6b7280">R$</span>
-            <input id="ci-preco" type="number" min="0" step="0.01" value="${calc.precoDesejado||''}" placeholder="0,00"
-              oninput="calcInput('precoDesejado',this.value,false)"
-              style="flex:1;padding:10px 12px;border-radius:9px;border:2px solid #16a34a;font-size:20px;font-weight:900;color:#15803d;font-family:inherit;text-align:right"/>
-          </div>
-          ${calc.precoDesejado>0&&custoProd>0?`
-          <div style="margin-top:8px">
-            ${(()=>{
-              const pd=N(calc.precoDesejado);
-              const lucroDir=pd-custoProd-(calc.incEmbal?v.custoEmbalDireto||1.5:0)-(calc.incCartao?pd*(v.taxaCartao||3.5)/100:0)-(calc.incImposto?pd*(v.impostoVenda||6)/100:0);
-              const mgDir=pd>0?((lucroDir/pd)*100):0;
-              const ok=mgDir>=20;
-              const great=mgDir>=40;
-              return`<div style="padding:9px 12px;border-radius:9px;background:${great?"#f0fdf4":ok?"#fffbeb":"#fef2f2"};border:1px solid ${great?"#bbf7d0":ok?"#fde68a":"#fecaca"}">
-                <span style="font-size:16px">${great?"✅":ok?"⚠️":"❌"}</span>
-                <strong style="color:${great?"#15803d":ok?"#92400e":"#b91c1c"}"> ${great?"Preço saudável!":ok?"Preço apertado, mas viável":pd<=custoProd?"Abaixo do custo!":"Margem muito baixa"}</strong>
-                <span style="color:#6b7280;font-size:12px"> · Lucro direto: <strong>${R(lucroDir)}</strong> · Margem: <strong style="color:${great?"#15803d":ok?"#d97706":"#ef4444"}">${mgDir.toFixed(1)}%</strong></span>
-              </div>`;
-            })()}
-          </div>`:""}
         </div>
 
         <div class="card">
           <h3 style="margin-bottom:12px;color:#ef4444">🎯 Meta de Margem</h3>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-            <input type="range" min="5" max="90" step="1" value="${calc.margemDesejada||v.margemPadrao}"
-              oninput="S.calc.margemDesejada=+this.value;const ni=document.getElementById('mg-num');if(ni)ni.value=this.value;render()"
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="5" max="90" step="5" value="${calc.margemDesejada||v.margemPadrao}"
+              oninput="S.calc.margemDesejada=+this.value;document.getElementById('mg-val').textContent=this.value+'%';render()"
               style="flex:1;accent-color:#4f46e5"/>
-            <input id="mg-num" type="number" min="5" max="90" step="1" value="${calc.margemDesejada||v.margemPadrao}"
-              oninput="S.calc.margemDesejada=Math.min(90,Math.max(5,+this.value||50));const sl=this.previousElementSibling;if(sl)sl.value=S.calc.margemDesejada;render()"
-              style="width:62px;padding:5px 8px;border-radius:7px;border:2px solid #4f46e5;font-size:16px;font-weight:900;color:#4f46e5;text-align:center;font-family:inherit"/>
-            <span style="font-size:16px;font-weight:900;color:#4f46e5">%</span>
+            <span id="mg-val" style="font-size:18px;font-weight:900;color:#4f46e5;min-width:48px">${calc.margemDesejada||v.margemPadrao}%</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af">
-            <span>5% (mín)</span><span>Conservador ←</span><span>→ Agressivo</span><span>90% (máx)</span>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;margin-top:4px">
+            <span>5%</span><span>Conservador</span><span>Agressivo</span><span>90%</span>
           </div>
         </div>
       </div>
@@ -1536,31 +1471,16 @@ function pgCalculadora(){
         <div class="card">
           <h3 style="margin-bottom:14px;color:#111827">💰 Preço Sugerido por Canal · Margem ${calc.margemDesejada||v.margemPadrao}%</h3>
           <div style="display:flex;flex-direction:column;gap:8px">
-            ${resultados.map(r=>{
-            const pd=N(calc.precoDesejado);
-            const hasDesej=pd>0&&custoProd>0;
-            let desejBadge='';
-            if(hasDesej&&r.preco>0){
-              const den2=1-r.txMkt-(cartaoAtivo||r.useCartao?cartao:0)-(impostoAtivo?imp:0);
-              const lucroDesej=pd*(den2)-(custoProd+r.embal+r.envio+fixo);
-              const mgD=pd>0?((lucroDesej/pd)*100):0;
-              const ok2=mgD>=20,great2=mgD>=40;
-              desejBadge=`<div style="margin-top:5px;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;background:${great2?"#f0fdf4":ok2?"#fffbeb":"#fef2f2"};color:${great2?"#15803d":ok2?"#92400e":"#b91c1c"}">
-                ${great2?"✅ Saudável":ok2?"⚠️ Apertado":"❌ ${pd<=(custoProd+r.embal+r.envio)?"Abaixo do custo":"Margem baixa"}"} · R$ ${pd.toFixed(2).replace(".",",")} → ${mgD.toFixed(1)}% lucro
-              </div>`;
-            }
-            return`<div style="display:grid;grid-template-columns:auto 1fr auto auto;align-items:start;gap:12px;padding:13px 15px;border-radius:12px;border:2px solid ${hasDesej?(r.preco>0?"#e5e7eb":"#fee2e2"):"#e5e7eb"};background:${r.preco>0?"#f9fafb":"#fef2f2"}">
-                <span style="font-size:18px;margin-top:2px">${r.icon}</span>
+            ${resultados.map(r=>`
+              <div style="display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;padding:13px 15px;border-radius:12px;border:2px solid ${r.preco>0?"#e5e7eb":"#fee2e2"};background:${r.preco>0?"#f9fafb":"#fef2f2"}">
+                <span style="font-size:18px">${r.icon}</span>
                 <div>
                   <div style="font-size:13px;font-weight:700;color:#111827">${r.label}</div>
                   <div style="font-size:11px;color:#9ca3af">
                     ${r.txMkt>0?`Taxa: ${(r.txMkt*100).toFixed(0)}% · `:""}
-                    ${r.useCartao||cartaoAtivo?`Cartão: ${((v.taxaCartao||3.5)).toFixed(0)}% · `:""}
                     ${r.envio>0?`Envio: ${R(r.envio)} · `:""}
-                    ${r.embal>0?`Embal: ${R(r.embal)}`:"Sem embal."}
-                    ${impostoAtivo?` · Imp: ${v.impostoVenda||6}%`:""}
+                    Embal: ${R(r.embal)}
                   </div>
-                  ${desejBadge}
                 </div>
                 <div style="text-align:center">
                   <div style="font-size:10px;color:#9ca3af">Lucro</div>
@@ -1570,8 +1490,7 @@ function pgCalculadora(){
                   <div style="font-size:10px;color:#9ca3af">Vender por</div>
                   <div style="font-size:20px;font-weight:900;color:${r.color}">${r.preco>0?R(r.preco):"—"}</div>
                 </div>
-              </div>`;
-          }).join("")}
+              </div>`).join("")}
           </div>
         </div>
 
