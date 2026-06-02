@@ -185,7 +185,7 @@ function fmtDate(s){if(!s||s==="")return "";const st=String(s).trim();if(/^\d{4}
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let S={
-  pag:"dashboard",pedidos:[],skus:[],consig:[],cores:[],resumo:{},filtStatus:"todos",filtAno:"todos",filtMes:"todos",
+  pag:"dashboard",pedidos:[],skus:[],consig:[],cores:[],resumo:{},filtStatus:"todos",filtAno:"todos",filtMes:"todos",calc:{filamento:0,tempo:0,qtd:1,isChaveiro:false,isIma:false,isMaoObra:false,adicional:0,canal:"direto",marketplace:"mercadolivre",taxaMkt:13,taxaMktCustom:0,imposto:6,embalagem:1.5,envio:0,margemDesejada:50},
   lP:false,lS:false,lC:false,eP:null,eS:null,eC:null,
   att:null,busca:"",parcSel:"Planet Kids Hair",
   tipoSel:"todos",consigSel:"todos",
@@ -337,7 +337,7 @@ async function loadResumo(){
 function render(){
   renderNav();
   if(S.att){const el=document.getElementById("sync-lbl");if(el)el.style.display="block";const et=document.getElementById("sync-time");if(et)et.textContent=S.att;}
-  const pages={dashboard:pgDash,pedidos:()=>pgPedidos(null),produzir:()=>pgPedidos("produzir"),entregar:()=>pgPedidos("entregar"),cobrar:()=>pgPedidos("cobrar"),leads:()=>pgPedidos("leads"),produtos:pgProdutos,consignacao:pgConsig,financeiro:pgFin,parceiro:pgParceiro,gerenciar:pgGerenciar};
+  const pages={dashboard:pgDash,pedidos:()=>pgPedidos(null),produzir:()=>pgPedidos("produzir"),entregar:()=>pgPedidos("entregar"),cobrar:()=>pgPedidos("cobrar"),leads:()=>pgPedidos("leads"),produtos:pgProdutos,consignacao:pgConsig,financeiro:pgFin,parceiro:pgParceiro,gerenciar:pgGerenciar,calculadora:pgCalculadora,variaveis:pgVariaveis};
   const el=document.getElementById("app");
   if(el) el.innerHTML=(pages[S.pag]||pgDash)();
   // Restore search focus after render
@@ -372,6 +372,8 @@ function renderNav(){
     {id:"financeiro",l:"Financeiro",i:"📊"},
     {id:"parceiro",l:"App Parceiro",i:"🏪"},
     {id:"gerenciar",l:"Parceiros",i:"⚙️"},
+    {id:"calculadora",l:"Calculadora",i:"🧮"},
+    {id:"variaveis",l:"Fatores Variáveis",i:"⚙️2"},
   ];
   const nav_el=document.getElementById("nav");
   if(nav_el) nav_el.innerHTML=nav.map(n=>`<button class="nb${S.pag===n.id?" on":""}" onclick="go('${n.id}')"><span><span class="ni">${n.i}</span>${n.l}</span>${n.b?`<span class="bdg">${n.b}</span>`:""}</button>`).join("");
@@ -1195,8 +1197,348 @@ function showApp(){
     </div>
     <div class="ct"><div class="ci" id="app"></div></div>`;
   try{const p=localStorage.getItem("amalello_parc");if(p)S.parceiros={...JSON.parse(p)};}catch(e){}
+  try{const v=localStorage.getItem("amalello_vars");if(v)S.vars={...getDefaultVars(),...JSON.parse(v)};}catch(e){}
+  if(!S.vars)S.vars=getDefaultVars();
   render();
   setTimeout(loadAll,500);
+}
+
+// ─── FATORES VARIÁVEIS ───────────────────────────────────────────────────────
+function getDefaultVars(){
+  return{
+    taxaDesp:10,        // % desperdício
+    taxaEnergia:0.88,   // R$/h Enel
+    taxaDepreciacao:1.0,// R$/h depreciação
+    taxaMaoObra:5,      // % sobre custo
+    custoEmbalDireto:1.50,
+    custoEnvioMktplace:15,
+    taxaMercadoLivre:13,
+    taxaShopee:12,
+    taxaOutro:10,
+    impostoVenda:6,
+    margemPadrao:50,
+    taxaCartao:3.5,
+    custoFixoRateado:0,
+  };
+}
+function saveVars(){
+  try{localStorage.setItem("amalello_vars",JSON.stringify(S.vars));}catch(e){}
+  render();
+}
+function updVar(k,v){S.vars[k]=parseFloat(v)||0;saveVars();}
+
+function pgVariaveis(){
+  const v=S.vars||getDefaultVars();
+  function row(label,key,unit,desc){
+    return`<div style="display:grid;grid-template-columns:1fr 160px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #f3f4f6">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#111827">${label}</div>
+        ${desc?`<div style="font-size:11px;color:#9ca3af;margin-top:2px">${desc}</div>`:""}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <input type="number" step="0.01" value="${v[key]||0}"
+          oninput="S.vars['${key}']=parseFloat(this.value)||0"
+          onchange="saveVars()"
+          style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid #d1d5db;font-size:13px;font-family:inherit;text-align:right"/>
+        <span style="font-size:12px;color:#6b7280;white-space:nowrap">${unit}</span>
+      </div>
+    </div>`;
+  }
+  return`
+    <h2>⚙️ Fatores Variáveis</h2>
+    <p class="sub">Configure as taxas e custos usados na Calculadora de Preços</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <h3 style="margin-bottom:12px;color:#4f46e5">🏭 Produção</h3>
+        ${row("Taxa de Desperdício","taxaDesp","%","Perda de filamento no processo")}
+        ${row("Taxa de Energia (Enel)","taxaEnergia","R$/h","Custo de energia por hora de impressão")}
+        ${row("Taxa de Depreciação","taxaDepreciacao","R$/h","Depreciação da impressora por hora")}
+        ${row("Taxa de Mão de Obra","taxaMaoObra","%","Percentual sobre custo de produção")}
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px;color:#16a34a">🚚 Venda & Logística</h3>
+        ${row("Custo de Embalagem (direto)","custoEmbalDireto","R$","Para vendas diretas/presenciais")}
+        ${row("Custo de Envio (marketplace)","custoEnvioMktplace","R$","Frete médio para e-commerce")}
+        ${row("Imposto de Venda","impostoVenda","%","MEI, DAS ou outro tributo")}
+        ${row("Taxa Cartão de Crédito","taxaCartao","%","Taxa média de máquina/gateway")}
+        ${row("Custo Fixo Rateado","custoFixoRateado","R$","Aluguel, internet, etc. por produto")}
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px;color:#d97706">🛍️ Taxas de Marketplace</h3>
+        ${row("Taxa Mercado Livre","taxaMercadoLivre","%","Taxa da plataforma sobre venda")}
+        ${row("Taxa Shopee","taxaShopee","%","Taxa da plataforma sobre venda")}
+        ${row("Taxa Outro Marketplace","taxaOutro","%","Para outras plataformas")}
+        ${row("Margem Padrão Desejada","margemPadrao","%","Margem de lucro meta para cálculos")}
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px;color:#ef4444">📊 Custos Médios (da planilha)</h3>
+        <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+          <div style="font-size:13px;font-weight:600;color:#111827">Custo Médio p/ Grama</div>
+          <div style="font-size:22px;font-weight:900;color:#4f46e5;margin-top:2px">${R(S.resumo.custoGrama||0.09)}</div>
+          <div style="font-size:11px;color:#9ca3af">Lido da aba Resumo P2 (automático)</div>
+        </div>
+        <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+          <div style="font-size:13px;font-weight:600;color:#111827">Custo Unitário Chaveiro</div>
+          <div style="font-size:22px;font-weight:900;color:#7c3aed;margin-top:2px">${R(S.resumo.custoChaveiro||0.37)}</div>
+          <div style="font-size:11px;color:#9ca3af">Lido da aba Resumo P4 (automático)</div>
+        </div>
+        <div style="padding:10px 0">
+          <div style="font-size:13px;font-weight:600;color:#111827">Custo Unitário Imã</div>
+          <div style="font-size:22px;font-weight:900;color:#059669;margin-top:2px">${R(S.resumo.custoIma||0.18)}</div>
+          <div style="font-size:11px;color:#9ca3af">Lido da aba Resumo P7 (automático)</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:12px;padding:12px 16px;background:#eff6ff;border-radius:12px;font-size:12px;color:#1e40af">
+      💡 Os custos médios de grama, chaveiro e imã são lidos automaticamente da planilha Google Sheets (aba Resumo). As demais variáveis são salvas localmente no navegador.
+    </div>
+  `;
+}
+
+// ─── CALCULADORA ─────────────────────────────────────────────────────────────
+function pgCalculadora(){
+  const v=S.vars||getDefaultVars();
+  const calc=S.calc;
+
+  // Lookup product from SKU if selected
+  const skuSel=S.skus.find(s=>(s["Impressão"]||"")===calc._skuNome);
+  const g=skuSel?N(skuSel.FilamentoUnitario||0):N(calc.filamento||0);
+  const h=skuSel?N(skuSel.TempoemHora||0):N(calc.tempo||0);
+  const qtd=N(calc.qtd)||1;
+  const isCh=calc.isChaveiro||false;
+  const isIma=calc.isIma||false;
+  const isMO=calc.isMaoObra||false;
+  const adicional=N(calc.adicional)||0;
+  const cG=S.resumo.custoGrama||0.09;
+  const cCh=S.resumo.custoChaveiro||0.37;
+  const cIma=S.resumo.custoIma||0.18;
+
+  // Cost calculation
+  const CFG=g*cG;
+  const TD=CFG*(v.taxaDesp/100);
+  const CEE=h*v.taxaEnergia;
+  const DEP=h*v.taxaDepreciacao;
+  const CHAV=isCh?cCh:0;
+  const IMA=isIma?cIma:0;
+  const MO=isMO?(CFG+TD+CEE+DEP+CHAV+IMA)*(v.taxaMaoObra/100):0;
+  const custoProd=CFG+TD+CEE+DEP+CHAV+IMA+MO+adicional;
+  const custoTotal=custoProd*qtd;
+
+  // Pricing by channel
+  const m=N(calc.margemDesejada||v.margemPadrao)/100;
+  const imp=(v.impostoVenda||6)/100;
+  const cartao=(v.taxaCartao||3.5)/100;
+  const fixo=(v.custoFixoRateado||0);
+
+  function calcPreco(txMkt,embal,envio,canal){
+    // Price = (custo + embal + envio + fixo) / (1 - margem - txMkt - imp - cartao)
+    const den=1-m-txMkt-imp-(canal==="direto"?cartao:0);
+    if(den<=0)return{preco:0,lucro:0,margem:0};
+    const preco=(custoProd+embal+envio+fixo)/den;
+    const lucro=preco-custoProd-embal-envio-fixo-(preco*(txMkt+imp+(canal==="direto"?cartao:0)));
+    return{preco:parseFloat(preco.toFixed(2)),lucro:parseFloat(lucro.toFixed(2)),margem:m*100};
+  }
+
+  const canalOpts=[
+    {id:"direto",label:"Venda Direta",icon:"🤝",txMkt:0,embal:v.custoEmbalDireto||1.5,envio:0,color:"#4f46e5"},
+    {id:"cartao",label:"Direto c/ Cartão",icon:"💳",txMkt:cartao*100,embal:v.custoEmbalDireto||1.5,envio:0,color:"#7c3aed"},
+    {id:"mercadolivre",label:"Mercado Livre",icon:"🛒",txMkt:v.taxaMercadoLivre/100,embal:v.custoEmbalDireto||1.5,envio:v.custoEnvioMktplace||15,color:"#d97706"},
+    {id:"shopee",label:"Shopee",icon:"🛍️",txMkt:v.taxaShopee/100,embal:v.custoEmbalDireto||1.5,envio:v.custoEnvioMktplace||15,color:"#ef4444"},
+    {id:"outro",label:"Outro Marketplace",icon:"🌐",txMkt:v.taxaOutro/100,embal:v.custoEmbalDireto||1.5,envio:v.custoEnvioMktplace||15,color:"#059669"},
+  ];
+
+  const resultados=canalOpts.map(ch=>({...ch,...calcPreco(
+    ch.id==="cartao"?0:ch.txMkt,
+    ch.embal,ch.envio,ch.id==="direto"||ch.id==="cartao"?"direto":"mkt"
+  )}));
+
+  // SKU families for filter
+  const familias=[...new Set(S.skus.map(s=>s.Tipo||"").filter(Boolean))].sort();
+  const famSel=calc._familia||"";
+  const skusFiltrados=famSel?S.skus.filter(s=>(s.Tipo||"")===famSel):S.skus;
+
+  const breakEven=custoProd>0?custoProd:0;
+  const precoRef=resultados[0]?.preco||0;
+
+  return`
+    <h2>🧮 Calculadora de Preços</h2>
+    <p class="sub">Simule o preço ideal por canal de venda</p>
+    <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
+
+      <!-- INPUTS PANEL -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <h3 style="margin-bottom:12px;color:#4f46e5">📦 Buscar Produto Cadastrado</h3>
+          <div style="margin-bottom:10px">
+            <label class="flbl">Família</label>
+            <select class="fsel" onchange="S.calc._familia=this.value;S.calc._skuNome='';render()">
+              <option value="">Todas as famílias</option>
+              ${familias.map(f=>`<option value="${f}"${famSel===f?" selected":""}>${f}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label class="flbl">Produto</label>
+            <select class="fsel" onchange="const sku=S.skus.find(s=>s['Impressão']===this.value);if(sku){S.calc._skuNome=this.value;S.calc.filamento=N(sku.FilamentoUnitario)||0;S.calc.tempo=N(sku.TempoemHora)||0;S.calc.isChaveiro=(sku.Tipo||'').toLowerCase()==='chaveiro';}render()">
+              <option value="">Selecione ou preencha manualmente...</option>
+              ${skusFiltrados.sort((a,b)=>(a["Impressão"]||"").localeCompare(b["Impressão"]||"")).map(s=>`<option value="${s["Impressão"]||""}"${calc._skuNome===s["Impressão"]?" selected":""}>${s["Impressão"]||""}</option>`).join("")}
+            </select>
+          </div>
+          ${skuSel?`<div style="margin-top:8px;background:#f0fdf4;border-radius:8px;padding:8px 10px;font-size:12px;color:#15803d">✅ ${skuSel["Impressão"]} · ${g}g · ${h}h · Tipo: ${skuSel.Tipo}</div>`:""}
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:12px;color:#d97706">⚙️ Parâmetros de Produção</h3>
+          <div class="fgrid">
+            <div>
+              <label class="flbl">Filamento (g)</label>
+              <input class="finp" type="number" min="0" step="1" value="${g||""}" placeholder="Ex: 60"
+                oninput="S.calc.filamento=+this.value;S.calc._skuNome='';render()"/>
+            </div>
+            <div>
+              <label class="flbl">Tempo (h)</label>
+              <input class="finp" type="number" min="0" step="0.5" value="${h||""}" placeholder="Ex: 3"
+                oninput="S.calc.tempo=+this.value;S.calc._skuNome='';render()"/>
+            </div>
+            <div>
+              <label class="flbl">Quantidade</label>
+              <input class="finp" type="number" min="1" step="1" value="${qtd}"
+                oninput="S.calc.qtd=+this.value||1;render()"/>
+            </div>
+            <div>
+              <label class="flbl">Custo Adicional (R$)</label>
+              <input class="finp" type="number" min="0" step="0.01" value="${adicional||""}" placeholder="Ex: 2.50"
+                oninput="S.calc.adicional=+this.value;render()"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+            ${[
+              ["isChaveiro","🔑 Chaveiro"],
+              ["isIma","🧲 Imã"],
+              ["isMaoObra","👷 Mão de Obra"],
+            ].map(([k,l])=>`<button onclick="S.calc['${k}']=!S.calc['${k}'];render()"
+              style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;background:${calc[k]?"#4f46e5":"#f3f4f6"};color:${calc[k]?"#fff":"#374151"}">${l}</button>`).join("")}
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:12px;color:#ef4444">🎯 Meta de Margem</h3>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="5" max="90" step="5" value="${calc.margemDesejada||v.margemPadrao}"
+              oninput="S.calc.margemDesejada=+this.value;document.getElementById('mg-val').textContent=this.value+'%';render()"
+              style="flex:1;accent-color:#4f46e5"/>
+            <span id="mg-val" style="font-size:18px;font-weight:900;color:#4f46e5;min-width:48px">${calc.margemDesejada||v.margemPadrao}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;margin-top:4px">
+            <span>5%</span><span>Conservador</span><span>Agressivo</span><span>90%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTS PANEL -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+
+        ${custoProd>0?`
+        <!-- Cost Breakdown -->
+        <div class="card">
+          <h3 style="margin-bottom:12px;color:#111827">📊 Breakdown de Custo (por unidade)</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:12px">
+            ${[
+              ["Filamento",CFG,"#4f46e5"],
+              ["Desperdício",TD,"#f59e0b"],
+              ["Energia",CEE,"#10b981"],
+              ["Depreciação",DEP,"#6b7280"],
+              isCh?["Chaveiro",CHAV,"#7c3aed"]:[],
+              isIma?["Imã",IMA,"#059669"]:[],
+              isMO?["Mão de Obra",MO,"#db2777"]:[],
+              adicional>0?["Adicional",adicional,"#0891b2"]:[],
+            ].filter(x=>x.length).map(([l,v2,col])=>`
+              <div style="background:#f9fafb;border-radius:10px;padding:10px;border-left:3px solid ${col}">
+                <div style="font-size:11px;color:#9ca3af">${l}</div>
+                <div style="font-size:14px;font-weight:800;color:${col}">${R(v2)}</div>
+              </div>`).join("")}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#fef2f2;border-radius:10px;margin-bottom:8px">
+            <span style="font-weight:700;color:#374151">Custo Total (${qtd} un.)</span>
+            <span style="font-size:18px;font-weight:900;color:#dc2626">${R(custoTotal)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#eff6ff;border-radius:10px">
+            <span style="font-weight:700;color:#374151">Preço mínimo (break-even)</span>
+            <span style="font-size:16px;font-weight:900;color:#2563eb">${R(breakEven)}</span>
+          </div>
+        </div>
+
+        <!-- Pricing by Channel -->
+        <div class="card">
+          <h3 style="margin-bottom:14px;color:#111827">💰 Preço Sugerido por Canal · Margem ${calc.margemDesejada||v.margemPadrao}%</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${resultados.map(r=>`
+              <div style="display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;padding:13px 15px;border-radius:12px;border:2px solid ${r.preco>0?"#e5e7eb":"#fee2e2"};background:${r.preco>0?"#f9fafb":"#fef2f2"}">
+                <span style="font-size:18px">${r.icon}</span>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#111827">${r.label}</div>
+                  <div style="font-size:11px;color:#9ca3af">
+                    ${r.txMkt>0?`Taxa: ${(r.txMkt*100).toFixed(0)}% · `:""}
+                    ${r.envio>0?`Envio: ${R(r.envio)} · `:""}
+                    Embal: ${R(r.embal)}
+                  </div>
+                </div>
+                <div style="text-align:center">
+                  <div style="font-size:10px;color:#9ca3af">Lucro</div>
+                  <div style="font-size:13px;font-weight:800;color:${r.lucro>0?"#16a34a":"#ef4444"}">${R(r.lucro)}</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:10px;color:#9ca3af">Vender por</div>
+                  <div style="font-size:20px;font-weight:900;color:${r.color}">${r.preco>0?R(r.preco):"—"}</div>
+                </div>
+              </div>`).join("")}
+          </div>
+        </div>
+
+        <!-- Margin Simulation Table -->
+        <div class="card">
+          <h3 style="margin-bottom:12px;color:#111827">📈 Simulação de Margens · Canal Direto</h3>
+          <div style="overflow-x:auto">
+            <table style="width:100%;font-size:12px;border-collapse:collapse">
+              <thead>
+                <tr style="background:#f9fafb">
+                  <th style="padding:8px;text-align:left;color:#374151">Margem</th>
+                  <th style="padding:8px;text-align:right;color:#374151">Preço</th>
+                  <th style="padding:8px;text-align:right;color:#374151">Lucro/un</th>
+                  <th style="padding:8px;text-align:right;color:#374151">Markup</th>
+                  <th style="padding:8px;text-align:right;color:#374151">c/ Cartão (3,5%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${[30,40,50,60,70,80].map(mg=>{
+                  const den=1-(mg/100)-(imp)-(cartao);
+                  const den2=1-(mg/100)-(imp);
+                  const pDir=den>0?(custoProd+(v.custoEmbalDireto||1.5))/den:0;
+                  const pCart=den2>0?(custoProd+(v.custoEmbalDireto||1.5))/den2:0;
+                  const lucro=pDir-custoProd-(v.custoEmbalDireto||1.5)-(pDir*(imp+cartao));
+                  const mk=custoProd>0?pDir/custoProd:0;
+                  const sel=mg===(calc.margemDesejada||v.margemPadrao);
+                  return`<tr style="border-top:1px solid #f3f4f6;background:${sel?"#eff6ff":"transparent"}">
+                    <td style="padding:7px 8px;font-weight:${sel?"900":"600"};color:${sel?"#4f46e5":"#374151"}">${mg}%${sel?" ◀":""}</td>
+                    <td style="padding:7px 8px;text-align:right;font-weight:700;color:#4f46e5">${R(pDir)}</td>
+                    <td style="padding:7px 8px;text-align:right;color:${lucro>0?"#16a34a":"#ef4444"};font-weight:700">${R(lucro)}</td>
+                    <td style="padding:7px 8px;text-align:right;color:#6b7280">×${mk.toFixed(2)}</td>
+                    <td style="padding:7px 8px;text-align:right;color:#7c3aed;font-weight:700">${R(pCart)}</td>
+                  </tr>`;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        `:`
+        <!-- Empty state -->
+        <div style="background:#fff;border-radius:13px;border:2px dashed #e5e7eb;padding:48px;text-align:center">
+          <div style="font-size:48px;margin-bottom:12px">🧮</div>
+          <div style="font-size:16px;font-weight:700;color:#374151;margin-bottom:6px">Selecione um produto ou preencha os dados</div>
+          <div style="font-size:13px;color:#9ca3af">Busque um produto cadastrado ou insira manualmente o filamento e o tempo de impressão</div>
+        </div>`}
+      </div>
+    </div>
+  `;
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
