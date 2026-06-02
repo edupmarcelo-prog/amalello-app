@@ -185,7 +185,7 @@ function fmtDate(s){if(!s||s==="")return "";const st=String(s).trim();if(/^\d{4}
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let S={
-  pag:"dashboard",pedidos:[],skus:[],consig:[],cores:[],resumo:{},filtStatus:"todos",filtAno:"todos",filtMes:"todos",calc:{filamento:0,tempo:0,qtd:1,isChaveiro:false,isIma:false,isMaoObra:false,adicional:0,canal:"direto",marketplace:"mercadolivre",taxaMkt:13,taxaMktCustom:0,imposto:6,embalagem:1.5,envio:0,margemDesejada:50,incImposto:true,incEmbal:true,incCartao:false,precoDesejado:0},
+  pag:"dashboard",pedidos:[],skus:[],consig:[],cores:[],resumo:{},filtStatus:"todos",filtAno:"todos",filtMes:"todos",calc:{filamento:0,tempo:0,qtd:1,isChaveiro:false,isIma:false,isMaoObra:false,adicional:0,canal:"direto",marketplace:"mercadolivre",taxaMkt:13,taxaMktCustom:0,imposto:6,embalagem:1.5,envio:0,margemDesejada:50},
   lP:false,lS:false,lC:false,eP:null,eS:null,eC:null,
   att:null,busca:"",parcSel:"Planet Kids Hair",
   tipoSel:"todos",consigSel:"todos",
@@ -353,19 +353,6 @@ function onBuscaInput(val){
   S.busca=val;
   if(_searchTimer)clearTimeout(_searchTimer);
   _searchTimer=setTimeout(()=>{render();},180);
-}
-let _calcTimer=null;
-function calcInput(field,val,clear_sku){
-  if(clear_sku)S.calc._skuNome='';
-  S.calc[field]=parseFloat(val)||0;
-  if(_calcTimer)clearTimeout(_calcTimer);
-  _calcTimer=setTimeout(function(){
-    var active=document.activeElement;
-    var aid=active?active.id:'';
-    var apos=(active&&active.setSelectionRange)?active.selectionStart:-1;
-    render();
-    if(aid){var el=document.getElementById(aid);if(el){el.focus();if(apos>=0)try{el.setSelectionRange(apos,apos);}catch(e){}}}
-  },200);
 }
 function go(p){S.pag=p;S.busca="";S.filtStatus="todos";S.filtAno="todos";S.filtMes="todos";render();}
 function renderNav(){
@@ -1310,190 +1297,248 @@ function pgVariaveis(){
 
 // ─── CALCULADORA ─────────────────────────────────────────────────────────────
 function pgCalculadora(){
-  var v=S.vars||getDefaultVars();
-  var calc=S.calc;
-  var skuSel=S.skus.find(function(s){return (s["Impressão"]||"")===calc._skuNome;});
-  var g=skuSel?N(skuSel.FilamentoUnitario||0):N(calc.filamento||0);
-  var h=skuSel?N(skuSel.TempoemHora||0):N(calc.tempo||0);
-  var qtd=N(calc.qtd)||1;
-  var adicional=N(calc.adicional)||0;
-  var isCh=!!calc.isChaveiro, isIma=!!calc.isIma, isMO=!!calc.isMaoObra;
-  var cG=S.resumo.custoGrama||0.09, cCh=S.resumo.custoChaveiro||0.37, cIma=S.resumo.custoIma||0.18;
-  var CFG=g*cG, TD=CFG*(v.taxaDesp/100), CEE=h*v.taxaEnergia, DEP=h*v.taxaDepreciacao;
-  var CHAV=isCh?cCh:0, IMA=isIma?cIma:0;
-  var MO=isMO?(CFG+TD+CEE+DEP+CHAV+IMA)*(v.taxaMaoObra/100):0;
-  var custoProd=CFG+TD+CEE+DEP+CHAV+IMA+MO+adicional;
-  var custoTotal=custoProd*qtd;
-  var mgMeta=N(calc.margemDesejada||v.margemPadrao);
-  var m=mgMeta/100;
-  var imp=(v.impostoVenda||6)/100;
-  var cartao=(v.taxaCartao||3.5)/100;
-  var fixo=v.custoFixoRateado||0;
-  var embalAtivo=calc.incEmbal!==false;
-  var impostoAtivo=calc.incImposto!==false;
-  var cartaoAtivo=!!calc.incCartao;
-  var pd=N(calc.precoDesejado||0);
-  var embalVal=embalAtivo?(v.custoEmbalDireto||1.5):0;
-  var envioMkt=v.custoEnvioMktplace||15;
-  var familias=[...new Set(S.skus.map(function(s){return s.Tipo||"";}).filter(Boolean))].sort();
-  var famSel=calc._familia||"";
-  var skusFil=(famSel?S.skus.filter(function(s){return (s.Tipo||"")===famSel;}):S.skus).slice().sort(function(a,b){return (a["Impressão"]||"").localeCompare(b["Impressão"]||"");});
+  const v=S.vars||getDefaultVars();
+  const calc=S.calc;
 
-  function calcCh(txMkt,embal,envio,useCartao){
-    var txC=(useCartao||cartaoAtivo)?cartao:0;
-    var txI=impostoAtivo?imp:0;
-    var den=1-m-txMkt-txI-txC;
-    if(den<=0)return{preco:0,lucro:0};
-    var preco=(custoProd+embal+envio+fixo)/den;
-    var lucro=preco-custoProd-embal-envio-fixo-(preco*(txMkt+txI+txC));
-    return{preco:Math.round(preco*100)/100,lucro:Math.round(lucro*100)/100};
+  // Lookup product from SKU if selected
+  const skuSel=S.skus.find(s=>(s["Impressão"]||"")===calc._skuNome);
+  const g=skuSel?N(skuSel.FilamentoUnitario||0):N(calc.filamento||0);
+  const h=skuSel?N(skuSel.TempoemHora||0):N(calc.tempo||0);
+  const qtd=N(calc.qtd)||1;
+  const isCh=calc.isChaveiro||false;
+  const isIma=calc.isIma||false;
+  const isMO=calc.isMaoObra||false;
+  const adicional=N(calc.adicional)||0;
+  const cG=S.resumo.custoGrama||0.09;
+  const cCh=S.resumo.custoChaveiro||0.37;
+  const cIma=S.resumo.custoIma||0.18;
+
+  // Cost calculation
+  const CFG=g*cG;
+  const TD=CFG*(v.taxaDesp/100);
+  const CEE=h*v.taxaEnergia;
+  const DEP=h*v.taxaDepreciacao;
+  const CHAV=isCh?cCh:0;
+  const IMA=isIma?cIma:0;
+  const MO=isMO?(CFG+TD+CEE+DEP+CHAV+IMA)*(v.taxaMaoObra/100):0;
+  const custoProd=CFG+TD+CEE+DEP+CHAV+IMA+MO+adicional;
+  const custoTotal=custoProd*qtd;
+
+  // Pricing by channel
+  const m=N(calc.margemDesejada||v.margemPadrao)/100;
+  const imp=(v.impostoVenda||6)/100;
+  const cartao=(v.taxaCartao||3.5)/100;
+  const fixo=(v.custoFixoRateado||0);
+
+  function calcPreco(txMkt,embal,envio,canal){
+    // Price = (custo + embal + envio + fixo) / (1 - margem - txMkt - imp - cartao)
+    const den=1-m-txMkt-imp-(canal==="direto"?cartao:0);
+    if(den<=0)return{preco:0,lucro:0,margem:0};
+    const preco=(custoProd+embal+envio+fixo)/den;
+    const lucro=preco-custoProd-embal-envio-fixo-(preco*(txMkt+imp+(canal==="direto"?cartao:0)));
+    return{preco:parseFloat(preco.toFixed(2)),lucro:parseFloat(lucro.toFixed(2)),margem:m*100};
   }
 
-  var canais=[
-    {id:"direto",  label:"Venda Direta",     icon:"🤝", txMkt:0,                     embal:embalVal,envio:0,       color:"#4f46e5",useCartao:false},
-    {id:"cartao",  label:"Direto c/ Cartão", icon:"💳", txMkt:0,                     embal:embalVal,envio:0,       color:"#7c3aed",useCartao:true},
-    {id:"mliv",    label:"Mercado Livre",     icon:"🛒", txMkt:v.taxaMercadoLivre/100,embal:embalVal,envio:envioMkt,color:"#d97706",useCartao:false},
-    {id:"shopee",  label:"Shopee",            icon:"🛍️", txMkt:v.taxaShopee/100,      embal:embalVal,envio:envioMkt,color:"#ef4444",useCartao:false},
-    {id:"outro",   label:"Outro Marketplace", icon:"🌐", txMkt:v.taxaOutro/100,       embal:embalVal,envio:envioMkt,color:"#059669",useCartao:false},
+  const canalOpts=[
+    {id:"direto",label:"Venda Direta",icon:"🤝",txMkt:0,embal:v.custoEmbalDireto||1.5,envio:0,color:"#4f46e5"},
+    {id:"cartao",label:"Direto c/ Cartão",icon:"💳",txMkt:cartao*100,embal:v.custoEmbalDireto||1.5,envio:0,color:"#7c3aed"},
+    {id:"mercadolivre",label:"Mercado Livre",icon:"🛒",txMkt:v.taxaMercadoLivre/100,embal:v.custoEmbalDireto||1.5,envio:v.custoEnvioMktplace||15,color:"#d97706"},
+    {id:"shopee",label:"Shopee",icon:"🛍️",txMkt:v.taxaShopee/100,embal:v.custoEmbalDireto||1.5,envio:v.custoEnvioMktplace||15,color:"#ef4444"},
+    {id:"outro",label:"Outro Marketplace",icon:"🌐",txMkt:v.taxaOutro/100,embal:v.custoEmbalDireto||1.5,envio:v.custoEnvioMktplace||15,color:"#059669"},
   ];
-  canais.forEach(function(ch){var r=calcCh(ch.txMkt,ch.embal,ch.envio,ch.useCartao);ch.preco=r.preco;ch.lucro=r.lucro;});
 
-  var html="";
-  html+='<h2>🧮 Calculadora de Preços</h2>';
-  html+='<p class="sub">Simule o preço ideal por canal de venda</p>';
-  html+='<div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">';
-  // LEFT
-  html+='<div style="display:flex;flex-direction:column;gap:12px">';
-  // SKU search
-  html+='<div class="card"><h3 style="margin-bottom:12px;color:#4f46e5">📦 Buscar Produto Cadastrado</h3>';
-  html+='<div style="margin-bottom:10px"><label class="flbl">Família</label><select class="fsel" onchange="S.calc._familia=this.value;S.calc._skuNome='';render()">';
-  html+='<option value="">Todas as famílias</option>';
-  familias.forEach(function(f){html+='<option value="'+f+'"'+(famSel===f?' selected':'')+'>'+f+'</option>';});
-  html+='</select></div>';
-  html+='<div><label class="flbl">Produto</label><select class="fsel" onchange="var nome=this.value;var sku=S.skus.find(function(s){return s['Impressão']===nome;});if(sku){S.calc._skuNome=nome;S.calc.filamento=N(sku.FilamentoUnitario)||0;S.calc.tempo=N(sku.TempoemHora)||0;S.calc.isChaveiro=(sku.Tipo||'').toLowerCase()==='chaveiro';}render()">';
-  html+='<option value="">Selecione ou preencha manualmente...</option>';
-  skusFil.forEach(function(s){var nome=s["Impressão"]||"";html+='<option value="'+nome+'"'+(calc._skuNome===nome?' selected':'')+'>'+nome+'</option>';});
-  html+='</select></div>';
-  if(skuSel){html+='<div style="margin-top:8px;background:#f0fdf4;border-radius:8px;padding:8px 10px;font-size:12px;color:#15803d">✅ '+skuSel["Impressão"]+' · '+g+'g · '+h+'h · Tipo: '+(skuSel.Tipo||"")+'</div>';}
-  html+='</div>';
-  // Production params
-  html+='<div class="card"><h3 style="margin-bottom:12px;color:#d97706">⚙️ Parâmetros de Produção</h3>';
-  html+='<div class="fgrid">';
-  html+='<div><label class="flbl">Filamento (g)</label><input id="ci-fil" class="finp" type="number" min="0" step="1" value="'+(g||"")+'" placeholder="Ex: 60" oninput="calcInput('filamento',this.value,true)"/></div>';
-  html+='<div><label class="flbl">Tempo (h)</label><input id="ci-tmp" class="finp" type="number" min="0" step="0.5" value="'+(h||"")+'" placeholder="Ex: 3" oninput="calcInput('tempo',this.value,true)"/></div>';
-  html+='<div><label class="flbl">Quantidade</label><input id="ci-qtd" class="finp" type="number" min="1" step="1" value="'+qtd+'" oninput="calcInput('qtd',this.value,false)"/></div>';
-  html+='<div><label class="flbl">Custo Adicional (R$)</label><input id="ci-add" class="finp" type="number" min="0" step="0.01" value="'+(adicional||"")+'" placeholder="0.00" oninput="calcInput('adicional',this.value,false)"/></div>';
-  html+='</div>';
-  html+='<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">';
-  [["isChaveiro","🔑 Chaveiro"],["isIma","🧲 Imã"],["isMaoObra","👷 Mão de Obra"]].forEach(function(t){
-    var on=!!calc[t[0]];
-    html+='<button onclick="S.calc[''+t[0]+'']=!S.calc[''+t[0]+''];render()" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;background:'+(on?'#4f46e5':'#f3f4f6')+';color:'+(on?'#fff':'#374151')+'">'+t[1]+'</button>';
-  });
-  html+='</div>';
-  html+='<div style="margin-top:10px;padding:10px;background:#f9fafb;border-radius:8px">';
-  html+='<div style="font-size:11px;color:#9ca3af;margin-bottom:7px;font-weight:700;text-transform:uppercase">Incluir nos cálculos</div>';
-  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-  [["incImposto","📋 Imposto","true"],["incEmbal","📦 Embalagem","true"],["incCartao","💳 Cartão","false"]].forEach(function(t){
-    var on2=t[0]==="incCartao"?!!calc[t[0]]:calc[t[0]]!==false;
-    html+='<button onclick="S.calc[''+t[0]+'']=!S.calc[''+t[0]+''];render()" style="padding:5px 11px;border-radius:7px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;background:'+(on2?'#4f46e5':'#e5e7eb')+';color:'+(on2?'#fff':'#374151')+'">'+t[1]+'</button>';
-  });
-  html+='</div></div></div>';
-  // Preço desejado
-  html+='<div class="card" style="background:linear-gradient(135deg,#f0fdf4,#fff);border:2px solid #bbf7d0">';
-  html+='<h3 style="margin-bottom:10px;color:#15803d">💡 Preço que Desejo Vender</h3>';
-  html+='<div style="display:flex;align-items:center;gap:10px">';
-  html+='<span style="font-size:18px;font-weight:900;color:#6b7280">R$</span>';
-  html+='<input id="ci-preco" type="number" min="0" step="0.01" value="'+(pd||"")+'" placeholder="0,00" oninput="calcInput('precoDesejado',this.value,false)" style="flex:1;padding:10px 12px;border-radius:9px;border:2px solid #16a34a;font-size:20px;font-weight:900;color:#15803d;font-family:inherit;text-align:right"/>';
-  html+='</div>';
-  if(pd>0&&custoProd>0){
-    var lucroDir=pd-custoProd-embalVal-(cartaoAtivo?pd*cartao:0)-(impostoAtivo?pd*imp:0);
-    var mgD=pd>0?(lucroDir/pd)*100:0;
-    var saude=mgD>=40?"✅ Preço saudável!":mgD>=20?"⚠️ Apertado, mas viável":pd<=custoProd?"❌ Abaixo do custo":"❌ Margem muito baixa";
-    var cor=mgD>=40?"#15803d":mgD>=20?"#92400e":"#b91c1c";
-    var bg=mgD>=40?"#f0fdf4":mgD>=20?"#fffbeb":"#fef2f2";
-    html+='<div style="margin-top:8px;padding:9px 12px;border-radius:9px;background:'+bg+'"><strong style="color:'+cor+'">'+saude+'</strong>';
-    html+=' <span style="font-size:12px;color:#6b7280"> · Lucro: <strong>'+R(lucroDir)+'</strong> · Margem: <strong style="color:'+cor+'">'+mgD.toFixed(1)+'%</strong></span></div>';
-  }
-  html+='</div>';
-  // Margem
-  html+='<div class="card"><h3 style="margin-bottom:12px;color:#ef4444">🎯 Meta de Margem</h3>';
-  html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
-  html+='<input type="range" min="5" max="90" step="1" value="'+mgMeta+'" oninput="S.calc.margemDesejada=+this.value;var ni=document.getElementById('mg-num');if(ni)ni.value=this.value;render()" style="flex:1;accent-color:#4f46e5"/>';
-  html+='<input id="mg-num" type="number" min="5" max="90" step="1" value="'+mgMeta+'" oninput="S.calc.margemDesejada=Math.min(90,Math.max(5,+this.value||50));var sl=this.previousElementSibling;if(sl)sl.value=S.calc.margemDesejada;render()" style="width:62px;padding:5px 8px;border-radius:7px;border:2px solid #4f46e5;font-size:16px;font-weight:900;color:#4f46e5;text-align:center;font-family:inherit"/>';
-  html+='<span style="font-size:16px;font-weight:900;color:#4f46e5">%</span></div>';
-  html+='<div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af"><span>5%</span><span>← Conservador</span><span>Agressivo →</span><span>90%</span></div></div>';
-  html+='</div>'; // end left
-  // RIGHT
-  html+='<div style="display:flex;flex-direction:column;gap:12px">';
-  if(custoProd>0){
-    // Breakdown
-    html+='<div class="card"><h3 style="margin-bottom:12px;color:#111827">📊 Breakdown de Custo (por unidade)</h3>';
-    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:12px">';
-    var costs=[["Filamento",CFG,"#4f46e5"],["Desperdício",TD,"#f59e0b"],["Energia",CEE,"#10b981"],["Depreciação",DEP,"#6b7280"]];
-    if(isCh)costs.push(["Chaveiro",CHAV,"#7c3aed"]);
-    if(isIma)costs.push(["Imã",IMA,"#059669"]);
-    if(isMO)costs.push(["Mão de Obra",MO,"#db2777"]);
-    if(adicional>0)costs.push(["Adicional",adicional,"#0891b2"]);
-    costs.forEach(function(co){html+='<div style="background:#f9fafb;border-radius:10px;padding:10px;border-left:3px solid '+co[2]+'"><div style="font-size:11px;color:#9ca3af">'+co[0]+'</div><div style="font-size:14px;font-weight:800;color:'+co[2]+'">'+R(co[1])+'</div></div>';});
-    html+='</div>';
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#fef2f2;border-radius:10px;margin-bottom:8px"><span style="font-weight:700">Custo Total ('+qtd+' un.)</span><span style="font-size:18px;font-weight:900;color:#dc2626">'+R(custoTotal)+'</span></div>';
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#eff6ff;border-radius:10px"><span style="font-weight:700">Preço mínimo (break-even)</span><span style="font-size:16px;font-weight:900;color:#2563eb">'+R(custoProd)+'</span></div></div>';
-    // Channels
-    html+='<div class="card"><h3 style="margin-bottom:14px;color:#111827">💰 Preço Sugerido por Canal · Margem '+mgMeta+'%</h3>';
-    canais.forEach(function(ch){
-      var txLine='';
-      if(ch.txMkt>0)txLine+='Taxa: '+(ch.txMkt*100).toFixed(0)+'% · ';
-      if(ch.useCartao||cartaoAtivo)txLine+='Cartão: '+(v.taxaCartao||3.5).toFixed(1)+'% · ';
-      if(ch.envio>0)txLine+='Envio: '+R(ch.envio)+' · ';
-      txLine+=ch.embal>0?'Embal: '+R(ch.embal):'Sem embal.';
-      if(impostoAtivo)txLine+=' · Imp: '+(v.impostoVenda||6)+'%';
-      html+='<div style="display:grid;grid-template-columns:auto 1fr auto auto;align-items:start;gap:12px;padding:13px 15px;border-radius:12px;border:2px solid #e5e7eb;background:#f9fafb;margin-bottom:8px">';
-      html+='<span style="font-size:18px;margin-top:2px">'+ch.icon+'</span><div>';
-      html+='<div style="font-size:13px;font-weight:700;color:#111827">'+ch.label+'</div>';
-      html+='<div style="font-size:11px;color:#9ca3af">'+txLine+'</div>';
-      if(pd>0){
-        var txC=(ch.useCartao||cartaoAtivo)?cartao:0;
-        var txI=impostoAtivo?imp:0;
-        var lucroDesejCh=pd-custoProd-ch.embal-ch.envio-fixo-(pd*(ch.txMkt+txI+txC));
-        var mgDCh=pd>0?(lucroDesejCh/pd)*100:0;
-        var s2=mgDCh>=40?"✅ Saudável":mgDCh>=20?"⚠️ Apertado":pd<=(custoProd+ch.embal+ch.envio)?"❌ Abaixo custo":"❌ Margem baixa";
-        var c2=mgDCh>=40?"#15803d":mgDCh>=20?"#92400e":"#b91c1c";
-        var b2=mgDCh>=40?"#f0fdf4":mgDCh>=20?"#fffbeb":"#fef2f2";
-        html+='<div style="margin-top:4px;padding:3px 7px;border-radius:6px;font-size:11px;font-weight:700;display:inline-block;background:'+b2+';color:'+c2+'">'+s2+' · R$ '+pd.toFixed(2).replace(".",",")+' → '+mgDCh.toFixed(1)+'%</div>';
-      }
-      html+='</div>';
-      html+='<div style="text-align:center"><div style="font-size:10px;color:#9ca3af">Lucro</div><div style="font-size:13px;font-weight:800;color:'+(ch.lucro>0?"#16a34a":"#ef4444")+'">'+R(ch.lucro)+'</div></div>';
-      html+='<div style="text-align:right"><div style="font-size:10px;color:#9ca3af">Vender por</div><div style="font-size:20px;font-weight:900;color:'+ch.color+'">'+(ch.preco>0?R(ch.preco):"—")+'</div></div></div>';
-    });
-    html+='</div>';
-    // Simulation table
-    html+='<div class="card"><h3 style="margin-bottom:12px;color:#111827">📈 Simulação de Margens · Canal Direto</h3>';
-    html+='<div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse">';
-    html+='<thead><tr style="background:#f9fafb"><th style="padding:8px;text-align:left">Margem</th><th style="padding:8px;text-align:right">Preço</th><th style="padding:8px;text-align:right">Lucro/un</th><th style="padding:8px;text-align:right">Markup</th><th style="padding:8px;text-align:right;color:#7c3aed">c/ Cartão</th></tr></thead><tbody>';
-    [30,40,50,60,70,80].forEach(function(mg){
-      var d1=1-(mg/100)-(impostoAtivo?imp:0)-(cartaoAtivo?cartao:0);
-      var d2=1-(mg/100)-(impostoAtivo?imp:0);
-      var pDir=d1>0?(custoProd+embalVal)/d1:0;
-      var pCart=d2>0?(custoProd+embalVal)/d2:0;
-      var lDir=pDir-custoProd-embalVal-(pDir*((impostoAtivo?imp:0)+(cartaoAtivo?cartao:0)));
-      var mk=custoProd>0?pDir/custoProd:0;
-      var sel=mg===mgMeta;
-      html+='<tr style="border-top:1px solid #f3f4f6;background:'+(sel?"#eff6ff":"transparent")+'">';
-      html+='<td style="padding:7px 8px;font-weight:'+(sel?"900":"600")+';color:'+(sel?"#4f46e5":"#374151")+'">'+mg+'%'+(sel?" ◀":"")+'</td>';
-      html+='<td style="padding:7px 8px;text-align:right;font-weight:700;color:#4f46e5">'+R(pDir)+'</td>';
-      html+='<td style="padding:7px 8px;text-align:right;color:'+(lDir>0?"#16a34a":"#ef4444")+';font-weight:700">'+R(lDir)+'</td>';
-      html+='<td style="padding:7px 8px;text-align:right;color:#6b7280">×'+mk.toFixed(2)+'</td>';
-      html+='<td style="padding:7px 8px;text-align:right;color:#7c3aed;font-weight:700">'+R(pCart)+'</td></tr>';
-    });
-    html+='</tbody></table></div></div>';
-  } else {
-    html+='<div style="background:#fff;border-radius:13px;border:2px dashed #e5e7eb;padding:48px;text-align:center">';
-    html+='<div style="font-size:48px;margin-bottom:12px">🧮</div>';
-    html+='<div style="font-size:16px;font-weight:700;color:#374151;margin-bottom:6px">Selecione um produto ou preencha os dados</div>';
-    html+='<div style="font-size:13px;color:#9ca3af">Busque um produto cadastrado ou insira o filamento e o tempo de impressão</div></div>';
-  }
-  html+='</div></div>';
-  return html;
+  const resultados=canalOpts.map(ch=>({...ch,...calcPreco(
+    ch.id==="cartao"?0:ch.txMkt,
+    ch.embal,ch.envio,ch.id==="direto"||ch.id==="cartao"?"direto":"mkt"
+  )}));
+
+  // SKU families for filter
+  const familias=[...new Set(S.skus.map(s=>s.Tipo||"").filter(Boolean))].sort();
+  const famSel=calc._familia||"";
+  const skusFiltrados=famSel?S.skus.filter(s=>(s.Tipo||"")===famSel):S.skus;
+
+  const breakEven=custoProd>0?custoProd:0;
+  const precoRef=resultados[0]?.preco||0;
+
+  return`
+    <h2>🧮 Calculadora de Preços</h2>
+    <p class="sub">Simule o preço ideal por canal de venda</p>
+    <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
+
+      <!-- INPUTS PANEL -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <h3 style="margin-bottom:12px;color:#4f46e5">📦 Buscar Produto Cadastrado</h3>
+          <div style="margin-bottom:10px">
+            <label class="flbl">Família</label>
+            <select class="fsel" onchange="S.calc._familia=this.value;S.calc._skuNome='';render()">
+              <option value="">Todas as famílias</option>
+              ${familias.map(f=>`<option value="${f}"${famSel===f?" selected":""}>${f}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label class="flbl">Produto</label>
+            <select class="fsel" onchange="const sku=S.skus.find(s=>s['Impressão']===this.value);if(sku){S.calc._skuNome=this.value;S.calc.filamento=N(sku.FilamentoUnitario)||0;S.calc.tempo=N(sku.TempoemHora)||0;S.calc.isChaveiro=(sku.Tipo||'').toLowerCase()==='chaveiro';}render()">
+              <option value="">Selecione ou preencha manualmente...</option>
+              ${skusFiltrados.sort((a,b)=>(a["Impressão"]||"").localeCompare(b["Impressão"]||"")).map(s=>`<option value="${s["Impressão"]||""}"${calc._skuNome===s["Impressão"]?" selected":""}>${s["Impressão"]||""}</option>`).join("")}
+            </select>
+          </div>
+          ${skuSel?`<div style="margin-top:8px;background:#f0fdf4;border-radius:8px;padding:8px 10px;font-size:12px;color:#15803d">✅ ${skuSel["Impressão"]} · ${g}g · ${h}h · Tipo: ${skuSel.Tipo}</div>`:""}
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:12px;color:#d97706">⚙️ Parâmetros de Produção</h3>
+          <div class="fgrid">
+            <div>
+              <label class="flbl">Filamento (g)</label>
+              <input class="finp" type="number" min="0" step="1" value="${g||""}" placeholder="Ex: 60"
+                oninput="S.calc.filamento=+this.value;S.calc._skuNome='';render()"/>
+            </div>
+            <div>
+              <label class="flbl">Tempo (h)</label>
+              <input class="finp" type="number" min="0" step="0.5" value="${h||""}" placeholder="Ex: 3"
+                oninput="S.calc.tempo=+this.value;S.calc._skuNome='';render()"/>
+            </div>
+            <div>
+              <label class="flbl">Quantidade</label>
+              <input class="finp" type="number" min="1" step="1" value="${qtd}"
+                oninput="S.calc.qtd=+this.value||1;render()"/>
+            </div>
+            <div>
+              <label class="flbl">Custo Adicional (R$)</label>
+              <input class="finp" type="number" min="0" step="0.01" value="${adicional||""}" placeholder="Ex: 2.50"
+                oninput="S.calc.adicional=+this.value;render()"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+            ${[
+              ["isChaveiro","🔑 Chaveiro"],
+              ["isIma","🧲 Imã"],
+              ["isMaoObra","👷 Mão de Obra"],
+            ].map(([k,l])=>`<button onclick="S.calc['${k}']=!S.calc['${k}'];render()"
+              style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;background:${calc[k]?"#4f46e5":"#f3f4f6"};color:${calc[k]?"#fff":"#374151"}">${l}</button>`).join("")}
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:12px;color:#ef4444">🎯 Meta de Margem</h3>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="5" max="90" step="5" value="${calc.margemDesejada||v.margemPadrao}"
+              oninput="S.calc.margemDesejada=+this.value;document.getElementById('mg-val').textContent=this.value+'%';render()"
+              style="flex:1;accent-color:#4f46e5"/>
+            <span id="mg-val" style="font-size:18px;font-weight:900;color:#4f46e5;min-width:48px">${calc.margemDesejada||v.margemPadrao}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;margin-top:4px">
+            <span>5%</span><span>Conservador</span><span>Agressivo</span><span>90%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTS PANEL -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+
+        ${custoProd>0?`
+        <!-- Cost Breakdown -->
+        <div class="card">
+          <h3 style="margin-bottom:12px;color:#111827">📊 Breakdown de Custo (por unidade)</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:12px">
+            ${[
+              ["Filamento",CFG,"#4f46e5"],
+              ["Desperdício",TD,"#f59e0b"],
+              ["Energia",CEE,"#10b981"],
+              ["Depreciação",DEP,"#6b7280"],
+              isCh?["Chaveiro",CHAV,"#7c3aed"]:[],
+              isIma?["Imã",IMA,"#059669"]:[],
+              isMO?["Mão de Obra",MO,"#db2777"]:[],
+              adicional>0?["Adicional",adicional,"#0891b2"]:[],
+            ].filter(x=>x.length).map(([l,v2,col])=>`
+              <div style="background:#f9fafb;border-radius:10px;padding:10px;border-left:3px solid ${col}">
+                <div style="font-size:11px;color:#9ca3af">${l}</div>
+                <div style="font-size:14px;font-weight:800;color:${col}">${R(v2)}</div>
+              </div>`).join("")}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#fef2f2;border-radius:10px;margin-bottom:8px">
+            <span style="font-weight:700;color:#374151">Custo Total (${qtd} un.)</span>
+            <span style="font-size:18px;font-weight:900;color:#dc2626">${R(custoTotal)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#eff6ff;border-radius:10px">
+            <span style="font-weight:700;color:#374151">Preço mínimo (break-even)</span>
+            <span style="font-size:16px;font-weight:900;color:#2563eb">${R(breakEven)}</span>
+          </div>
+        </div>
+
+        <!-- Pricing by Channel -->
+        <div class="card">
+          <h3 style="margin-bottom:14px;color:#111827">💰 Preço Sugerido por Canal · Margem ${calc.margemDesejada||v.margemPadrao}%</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${resultados.map(r=>`
+              <div style="display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;padding:13px 15px;border-radius:12px;border:2px solid ${r.preco>0?"#e5e7eb":"#fee2e2"};background:${r.preco>0?"#f9fafb":"#fef2f2"}">
+                <span style="font-size:18px">${r.icon}</span>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#111827">${r.label}</div>
+                  <div style="font-size:11px;color:#9ca3af">
+                    ${r.txMkt>0?`Taxa: ${(r.txMkt*100).toFixed(0)}% · `:""}
+                    ${r.envio>0?`Envio: ${R(r.envio)} · `:""}
+                    Embal: ${R(r.embal)}
+                  </div>
+                </div>
+                <div style="text-align:center">
+                  <div style="font-size:10px;color:#9ca3af">Lucro</div>
+                  <div style="font-size:13px;font-weight:800;color:${r.lucro>0?"#16a34a":"#ef4444"}">${R(r.lucro)}</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:10px;color:#9ca3af">Vender por</div>
+                  <div style="font-size:20px;font-weight:900;color:${r.color}">${r.preco>0?R(r.preco):"—"}</div>
+                </div>
+              </div>`).join("")}
+          </div>
+        </div>
+
+        <!-- Margin Simulation Table -->
+        <div class="card">
+          <h3 style="margin-bottom:12px;color:#111827">📈 Simulação de Margens · Canal Direto</h3>
+          <div style="overflow-x:auto">
+            <table style="width:100%;font-size:12px;border-collapse:collapse">
+              <thead>
+                <tr style="background:#f9fafb">
+                  <th style="padding:8px;text-align:left;color:#374151">Margem</th>
+                  <th style="padding:8px;text-align:right;color:#374151">Preço</th>
+                  <th style="padding:8px;text-align:right;color:#374151">Lucro/un</th>
+                  <th style="padding:8px;text-align:right;color:#374151">Markup</th>
+                  <th style="padding:8px;text-align:right;color:#374151">c/ Cartão (3,5%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${[30,40,50,60,70,80].map(mg=>{
+                  const den=1-(mg/100)-(imp)-(cartao);
+                  const den2=1-(mg/100)-(imp);
+                  const pDir=den>0?(custoProd+(v.custoEmbalDireto||1.5))/den:0;
+                  const pCart=den2>0?(custoProd+(v.custoEmbalDireto||1.5))/den2:0;
+                  const lucro=pDir-custoProd-(v.custoEmbalDireto||1.5)-(pDir*(imp+cartao));
+                  const mk=custoProd>0?pDir/custoProd:0;
+                  const sel=mg===(calc.margemDesejada||v.margemPadrao);
+                  return`<tr style="border-top:1px solid #f3f4f6;background:${sel?"#eff6ff":"transparent"}">
+                    <td style="padding:7px 8px;font-weight:${sel?"900":"600"};color:${sel?"#4f46e5":"#374151"}">${mg}%${sel?" ◀":""}</td>
+                    <td style="padding:7px 8px;text-align:right;font-weight:700;color:#4f46e5">${R(pDir)}</td>
+                    <td style="padding:7px 8px;text-align:right;color:${lucro>0?"#16a34a":"#ef4444"};font-weight:700">${R(lucro)}</td>
+                    <td style="padding:7px 8px;text-align:right;color:#6b7280">×${mk.toFixed(2)}</td>
+                    <td style="padding:7px 8px;text-align:right;color:#7c3aed;font-weight:700">${R(pCart)}</td>
+                  </tr>`;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        `:`
+        <!-- Empty state -->
+        <div style="background:#fff;border-radius:13px;border:2px dashed #e5e7eb;padding:48px;text-align:center">
+          <div style="font-size:48px;margin-bottom:12px">🧮</div>
+          <div style="font-size:16px;font-weight:700;color:#374151;margin-bottom:6px">Selecione um produto ou preencha os dados</div>
+          <div style="font-size:13px;color:#9ca3af">Busque um produto cadastrado ou insira manualmente o filamento e o tempo de impressão</div>
+        </div>`}
+      </div>
+    </div>
+  `;
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
