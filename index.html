@@ -369,17 +369,36 @@ function calcInput(field,val,clear_sku){
       var el=document.getElementById(aid);
       if(el){
         el.focus();
-        // Restore cursor: works for text inputs; setSelectionRange fails silently for number
         try{
           var len=String(el.value).length;
-          // Use saved position if valid, otherwise go to end
           var pos=(apos>=0&&apos<=len)?apos:len;
           el.setSelectionRange(pos,pos);
-        }catch(e){
-          // Fallback: select all then collapse to end
-          try{el.select();}catch(e2){}
-        }
+        }catch(e){try{el.select();}catch(e2){}}
       }
+    }
+  },200);
+}
+// Handler dedicado para o campo de margem percentual
+function calcMargem(val){
+  var v=Math.min(90,Math.max(1,parseFloat(val)||1));
+  S.calc.margemDesejada=v;
+  // Atualiza o slider imediatamente sem re-render
+  var sl=document.getElementById("margem-slider");
+  if(sl) sl.value=v;
+  // Debounce do render
+  if(_calcTimer) clearTimeout(_calcTimer);
+  _calcTimer=setTimeout(function(){
+    var el=document.getElementById("mg-num");
+    var apos=el?el.selectionStart:-1;
+    render();
+    el=document.getElementById("mg-num");
+    if(el){
+      el.focus();
+      try{
+        var len=String(el.value).length;
+        var pos=(apos>=0&&apos<=len)?apos:len;
+        el.setSelectionRange(pos,pos);
+      }catch(e){}
     }
   },200);
 }
@@ -1214,6 +1233,11 @@ function showApp(){
         <h1>Amalello</h1><p>Design · Impressão 3D</p>
         <div class="sb-sync" id="sync-lbl" style="display:none">🟢 <span id="sync-time"></span></div>
       </div>
+      <div style="padding:8px 9px 4px">
+        <button onclick="openNew();go('pedidos')" style="width:100%;padding:9px 12px;border-radius:10px;border:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+          <span style="font-size:16px">+</span> Novo Pedido
+        </button>
+      </div>
       <div class="sb-nav" id="nav"></div>
       <div class="sb-ft">
         <button class="sync-btn" onclick="loadAll()">🔄 Sincronizar planilhas</button>
@@ -1229,7 +1253,7 @@ function showApp(){
   try{const v=localStorage.getItem("amalello_vars");if(v)S.vars={...getDefaultVars(),...JSON.parse(v)};}catch(e){}
   if(!S.vars)S.vars=getDefaultVars();
   render();
-  setTimeout(loadAll,500);
+  loadAll(); // Auto-sincroniza ao abrir o app
 }
 
 // ─── FATORES VARIÁVEIS ───────────────────────────────────────────────────────
@@ -1428,7 +1452,7 @@ function pgCalculadora(){
   a('<div class="card"><h3 style="margin-bottom:12px;color:#ef4444">🎯 Meta de Margem</h3>');
   a('<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">');
   a('<input type="range" min="5" max="90" step="1" value="'+mgMeta+'" oninput="S.calc.margemDesejada=+this.value;var ni=document.getElementById(\'mg-num\');if(ni)ni.value=this.value;render()" style="flex:1;accent-color:#4f46e5"/>');
-  a('<input id="mg-num" type="text" inputmode="numeric" value="'+mgMeta+'" oninput="S.calc.margemDesejada=Math.min(90,Math.max(5,+this.value||50));var sl=this.previousElementSibling;if(sl)sl.value=S.calc.margemDesejada;render()" style="width:62px;padding:5px 8px;border-radius:7px;border:2px solid #4f46e5;font-size:16px;font-weight:900;color:#4f46e5;text-align:center;font-family:inherit"/>');
+  a('<input id="mg-num" type="text" inputmode="numeric" value="'+mgMeta+'" oninput="calcMargem(this.value)" style="width:62px;padding:5px 8px;border-radius:7px;border:2px solid #4f46e5;font-size:16px;font-weight:900;color:#4f46e5;text-align:center;font-family:inherit"/>');
   a('<span style="font-size:16px;font-weight:900;color:#4f46e5">%</span></div>');
   a('<div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af"><span>5%</span><span>← Conservador</span><span>Agressivo →</span><span>90%</span></div></div>');
   a('</div>'); // end left
