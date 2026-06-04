@@ -357,13 +357,30 @@ function onBuscaInput(val){
 let _calcTimer=null;
 function calcInput(field,val,clear_sku){
   if(clear_sku)S.calc._skuNome="";
-  S.calc[field]=parseFloat(val)||0;
+  // Normalize decimal separators (comma → dot) for parseFloat
+  var normalized=String(val).replace(",",".");
+  S.calc[field]=parseFloat(normalized)||0;
   if(_calcTimer)clearTimeout(_calcTimer);
   _calcTimer=setTimeout(function(){
     var aid=document.activeElement?document.activeElement.id:"";
     var apos=(document.activeElement&&document.activeElement.setSelectionRange)?document.activeElement.selectionStart:-1;
     render();
-    if(aid){var el=document.getElementById(aid);if(el){el.focus();if(apos>=0)try{el.setSelectionRange(apos,apos);}catch(e){}}}
+    if(aid){
+      var el=document.getElementById(aid);
+      if(el){
+        el.focus();
+        // Restore cursor: works for text inputs; setSelectionRange fails silently for number
+        try{
+          var len=String(el.value).length;
+          // Use saved position if valid, otherwise go to end
+          var pos=(apos>=0&&apos<=len)?apos:len;
+          el.setSelectionRange(pos,pos);
+        }catch(e){
+          // Fallback: select all then collapse to end
+          try{el.select();}catch(e2){}
+        }
+      }
+    }
   },200);
 }
 function go(p){S.pag=p;S.busca="";S.filtStatus="todos";S.filtAno="todos";S.filtMes="todos";render();}
@@ -1371,10 +1388,10 @@ function pgCalculadora(){
   // Params card
   a('<div class="card"><h3 style="margin-bottom:12px;color:#d97706">⚙️ Parâmetros de Produção</h3>');
   a('<div class="fgrid">');
-  a('<div><label class="flbl">Filamento (g)</label><input id="ci-fil" class="finp" type="number" min="0" step="1" value="'+(g||"")+'" placeholder="Ex: 60" oninput="calcInput(\'filamento\',this.value,true)"/></div>');
-  a('<div><label class="flbl">Tempo (h)</label><input id="ci-tmp" class="finp" type="number" min="0" step="0.5" value="'+(h||"")+'" placeholder="Ex: 3" oninput="calcInput(\'tempo\',this.value,true)"/></div>');
-  a('<div><label class="flbl">Quantidade</label><input id="ci-qtd" class="finp" type="number" min="1" value="'+qtd+'" oninput="calcInput(\'qtd\',this.value,false)"/></div>');
-  a('<div><label class="flbl">Custo Adicional (R$)</label><input id="ci-add" class="finp" type="number" min="0" step="0.01" value="'+(adicional||"")+'" placeholder="0.00" oninput="calcInput(\'adicional\',this.value,false)"/></div>');
+  a('<div><label class="flbl">Filamento (g)</label><input id="ci-fil" class="finp" type="text" inputmode="decimal" value="'+(g||"")+'" placeholder="Ex: 60" oninput="calcInput(\'filamento\',this.value,true)"/></div>');
+  a('<div><label class="flbl">Tempo (h)</label><input id="ci-tmp" class="finp" type="text" inputmode="decimal" value="'+(h||"")+'" placeholder="Ex: 3" oninput="calcInput(\'tempo\',this.value,true)"/></div>');
+  a('<div><label class="flbl">Quantidade</label><input id="ci-qtd" class="finp" type="text" inputmode="numeric" value="'+qtd+'" oninput="calcInput(\'qtd\',this.value,false)"/></div>');
+  a('<div><label class="flbl">Custo Adicional (R$)</label><input id="ci-add" class="finp" type="text" inputmode="decimal" value="'+(adicional||"")+'" placeholder="0.00" oninput="calcInput(\'adicional\',this.value,false)"/></div>');
   a('</div>');
   // Toggle buttons
   a('<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">');
@@ -1397,7 +1414,7 @@ function pgCalculadora(){
   a('<h3 style="margin-bottom:10px;color:#15803d">💡 Preço que Desejo Vender</h3>');
   a('<div style="display:flex;align-items:center;gap:10px">');
   a('<span style="font-size:18px;font-weight:900;color:#6b7280">R$</span>');
-  a('<input id="ci-preco" type="number" min="0" step="0.01" value="'+(pd||"")+'" placeholder="0,00" oninput="calcInput(\'precoDesejado\',this.value,false)" style="flex:1;padding:10px 12px;border-radius:9px;border:2px solid #16a34a;font-size:20px;font-weight:900;color:#15803d;font-family:inherit;text-align:right"/>');
+  a('<input id="ci-preco" type="text" inputmode="decimal" value="'+(pd||"")+'" placeholder="0,00" oninput="calcInput(\'precoDesejado\',this.value,false)" style="flex:1;padding:10px 12px;border-radius:9px;border:2px solid #16a34a;font-size:20px;font-weight:900;color:#15803d;font-family:inherit;text-align:right"/>');
   a('</div>');
   if(pd>0&&custoProd>0){
     var lucroDir=pd-custoProd-embalVal-(cartaoAtivo?pd*cartao:0)-(impostoAtivo?pd*imp:0);
@@ -1411,7 +1428,7 @@ function pgCalculadora(){
   a('<div class="card"><h3 style="margin-bottom:12px;color:#ef4444">🎯 Meta de Margem</h3>');
   a('<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">');
   a('<input type="range" min="5" max="90" step="1" value="'+mgMeta+'" oninput="S.calc.margemDesejada=+this.value;var ni=document.getElementById(\'mg-num\');if(ni)ni.value=this.value;render()" style="flex:1;accent-color:#4f46e5"/>');
-  a('<input id="mg-num" type="number" min="5" max="90" step="1" value="'+mgMeta+'" oninput="S.calc.margemDesejada=Math.min(90,Math.max(5,+this.value||50));var sl=this.previousElementSibling;if(sl)sl.value=S.calc.margemDesejada;render()" style="width:62px;padding:5px 8px;border-radius:7px;border:2px solid #4f46e5;font-size:16px;font-weight:900;color:#4f46e5;text-align:center;font-family:inherit"/>');
+  a('<input id="mg-num" type="text" inputmode="numeric" value="'+mgMeta+'" oninput="S.calc.margemDesejada=Math.min(90,Math.max(5,+this.value||50));var sl=this.previousElementSibling;if(sl)sl.value=S.calc.margemDesejada;render()" style="width:62px;padding:5px 8px;border-radius:7px;border:2px solid #4f46e5;font-size:16px;font-weight:900;color:#4f46e5;text-align:center;font-family:inherit"/>');
   a('<span style="font-size:16px;font-weight:900;color:#4f46e5">%</span></div>');
   a('<div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af"><span>5%</span><span>← Conservador</span><span>Agressivo →</span><span>90%</span></div></div>');
   a('</div>'); // end left
