@@ -364,18 +364,24 @@ function render(){
   const pages={dashboard:pgDash,pedidos:()=>pgPedidos(null),produzir:()=>pgPedidos("produzir"),entregar:()=>pgPedidos("entregar"),cobrar:()=>pgPedidos("cobrar"),leads:()=>pgPedidos("leads"),produtos:pgProdutos,consignacao:pgConsig,financeiro:pgFin,parceiro:pgParceiro,gerenciar:pgGerenciar,calculadora:pgCalculadora,variaveis:pgVariaveis};
   const el=document.getElementById("app");
   if(el) el.innerHTML=(pages[S.pag]||pgDash)();
-  // Restore search focus only when user was already typing (not on navigation)
-  const si=document.getElementById("search-input");
-  if(si&&document.activeElement===si){
-    const v=si.value,len=v.length;
-    try{si.setSelectionRange(len,len);}catch(e){}
-  }
+  // Focus restoration handled by onBuscaInput after debounce
 }
 let _searchTimer=null;
 function onBuscaInput(val){
   S.busca=val;
   if(_searchTimer)clearTimeout(_searchTimer);
-  _searchTimer=setTimeout(()=>{render();},180);
+  // Save focus state BEFORE the debounce fires (capture now while element still exists)
+  var _busca_aid="search-input";
+  var _busca_pos=val.length; // cursor at end of typed text
+  _searchTimer=setTimeout(function(){
+    render();
+    // Restore focus and cursor AFTER render recreates the element
+    var el=document.getElementById(_busca_aid);
+    if(el){
+      el.focus();
+      try{el.setSelectionRange(_busca_pos,_busca_pos);}catch(e){}
+    }
+  },180);
 }
 let _calcTimer=null;
 function calcInput(field,val,clear_sku){
