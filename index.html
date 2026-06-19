@@ -132,6 +132,7 @@ const CLIENT_ID = "967483167289-m1ctc3ti8o12btnn44h63c94or34570d.apps.googleuser
 const API_KEY   = "AIzaSyALhdkEqgIVaW9wbWRpyDnB0ZEV2BFyrds";
 const SCOPES    = "https://www.googleapis.com/auth/spreadsheets";
 const SHEET_ID  = "1BxrGwTV535hTLv0ibZCOKYYLd7ge7bES_oy8yim7E6Y";
+const ORC_SHEET_ID = "17jkx5ATCAm_W47PtKHizjyC3ZlA7pGiy0jYEVbjMjlw"; // Planilha Orçamentos
 const SKU_ID    = "1IUntgKC3UazaysvsylAAikdUxkfWV6lEGGfBNNdvIlo";
 const PARC_DEFAULT = {
   "Planet Kids Hair":"1-J32HhuPd0b3H8mKgkuB0APblydt8CwV0R82XECUoZU",
@@ -203,7 +204,7 @@ function fmtDate(s){if(!s||s==="")return "";const st=String(s).trim();if(/^\d{4}
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let S={
-  pag:"dashboard",pedidos:[],skus:[],consig:[],cores:[],resumo:{},filtStatus:"todos",filtAno:"todos",filtMes:"todos",calc:{filamento:0,tempo:0,qtd:1,isChaveiro:false,isIma:false,isMaoObra:false,adicional:0,canal:"direto",marketplace:"mercadolivre",taxaMkt:13,taxaMktCustom:0,imposto:6,embalagem:1.5,envio:0,margemDesejada:50,incImposto:true,incEmbal:true,incCartao:false,precoDesejado:0},
+  pag:"dashboard",pedidos:[],skus:[],orcamentos:[],lO:false,eO:null,editOrc:null,consig:[],cores:[],resumo:{},filtStatus:"todos",filtAno:"todos",filtMes:"todos",calc:{filamento:0,tempo:0,qtd:1,isChaveiro:false,isIma:false,isMaoObra:false,adicional:0,canal:"direto",marketplace:"mercadolivre",taxaMkt:13,taxaMktCustom:0,imposto:6,embalagem:1.5,envio:0,margemDesejada:50,incImposto:true,incEmbal:true,incCartao:false,precoDesejado:0},
   lP:false,lS:false,lC:false,eP:null,eS:null,eC:null,
   att:null,busca:"",parcSel:"Planet Kids Hair",
   tipoSel:"todos",consigSel:"todos",
@@ -220,7 +221,7 @@ async function loadAll(){
   if(st) st.textContent="Sincronizando...";
   // Clear all cache to guarantee fresh data
   Object.keys(_c).forEach(k=>delete _c[k]);
-  await Promise.all([loadPed(),loadSku(),loadCon(),loadApoio(),loadResumo()]);
+  await Promise.all([loadPed(),loadSku(),loadCon(),loadApoio(),loadResumo(),loadOrcamentos()]);
   // Mark sync time
   S.att=new Date().toLocaleTimeString("pt-BR");
   if(sl){sl.style.opacity="1";}
@@ -374,7 +375,7 @@ async function loadResumo(){
 function render(){
   renderNav();
   if(S.att){const el=document.getElementById("sync-lbl");if(el)el.style.display="block";const et=document.getElementById("sync-time");if(et)et.textContent=S.att;}
-  const pages={dashboard:pgDash,pedidos:()=>pgPedidos(null),produzir:()=>pgPedidos("produzir"),entregar:()=>pgPedidos("entregar"),cobrar:()=>pgPedidos("cobrar"),leads:()=>pgPedidos("leads"),produtos:pgProdutos,consignacao:pgConsig,financeiro:pgFin,parceiro:pgParceiro,gerenciar:pgGerenciar,calculadora:pgCalculadora,variaveis:pgVariaveis};
+  const pages={dashboard:pgDash,pedidos:()=>pgPedidos(null),produzir:()=>pgPedidos("produzir"),entregar:()=>pgPedidos("entregar"),cobrar:()=>pgPedidos("cobrar"),leads:()=>pgPedidos("leads"),produtos:pgProdutos,consignacao:pgConsig,financeiro:pgFin,parceiro:pgParceiro,gerenciar:pgGerenciar,orcamentos:pgOrcamentos,calculadora:pgCalculadora,variaveis:pgVariaveis};
   const el=document.getElementById("app");
   if(el) el.innerHTML=(pages[S.pag]||pgDash)();
   // Focus restoration handled by onBuscaInput after debounce
@@ -483,6 +484,7 @@ function renderNav(){
     {id:"financeiro",l:"Financeiro",i:"📊"},
     {id:"parceiro",l:"App Parceiro",i:"🏪"},
     {id:"gerenciar",l:"Parceiros",i:"⚙️"},
+    {id:"orcamentos",l:"Orçamentos",i:"📋"},
     {id:"calculadora",l:"Calculadora",i:"🧮"},
     {id:"variaveis",l:"Fatores Variáveis",i:"⚙️2"},
   ];
@@ -1303,6 +1305,9 @@ function showApp(){
         <div class="sb-sync" id="sync-lbl" style="display:none">🟢 <span id="sync-time"></span></div>
       </div>
       <div style="padding:8px 9px 4px">
+        <button onclick="openOrcamento(null)" style="width:100%;padding:9px 12px;border-radius:10px;border:none;background:linear-gradient(135deg,#059669,#0d9488);color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px">
+          <span style="font-size:16px">📋</span> Orçamento
+        </button>
         <button onclick="openNew();go('pedidos')" style="width:100%;padding:9px 12px;border-radius:10px;border:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
           <span style="font-size:16px">+</span> Novo Pedido
         </button>
@@ -1627,6 +1632,524 @@ function pgCalculadora(){
   },0);
   return H.join("");
 }
+
+
+// ─── ORÇAMENTOS ───────────────────────────────────────────────────────────────
+
+async function loadOrcamentos(){
+  S.lO=true; S.eO=null;
+  try{
+    const rows=await readSheet(ORC_SHEET_ID,"Orçamentos!A:P");
+    S.orcamentos=(rows||[]).slice(1).filter(function(r){return r[0];}).map(function(r){
+      var items=[];
+      try{items=JSON.parse(r[8]||"[]");}catch(e){}
+      return{
+        numero:r[0]||"", data:r[1]||"", cliente:r[2]||"", celular:r[3]||"", instagram:r[4]||"",
+        formaPag:r[5]||"pix", imposto:r[6]||"Não", frete:N(r[7])||0,
+        items:items,
+        valorTotal:N(r[9])||0, custoTotal:N(r[10])||0, lucroTotal:N(r[11])||0,
+        margem:N(r[12])||0, markup:N(r[13])||0, status:r[14]||"Em aberto", obs:r[15]||""
+      };
+    });
+    S.orcamentos.sort(function(a,b){return b.numero.localeCompare(a.numero);});
+  }catch(e){S.eO=e.message||String(e);}
+  S.lO=false; render();
+}
+
+function gerarNumOrc(clienteNome){
+  var now=new Date();
+  var y=now.getFullYear();
+  var m=String(now.getMonth()+1).padStart(2,"0");
+  var d=String(now.getDate()).padStart(2,"0");
+  var primeiro=(clienteNome||"Cliente").split(" ")[0];
+  return ""+y+m+d+primeiro;
+}
+
+function calcTotaisOrc(orc){
+  var v=S.vars||getDefaultVars();
+  var isCredito=(orc.formaPag||"pix")==="credito";
+  var isImposto=(orc.imposto||"Não")==="Sim";
+  var txCartao=isCredito?(v.taxaCartao||3.5)/100:0;
+  var txImposto=isImposto?(v.impostoVenda||6)/100:0;
+  var extra=txCartao+txImposto;
+  var valorTotal=0, custoTotal=0, lucroTotal=0;
+  (orc.items||[]).forEach(function(it){
+    var qtd=N(it.qtd)||1;
+    var vUn=N(it.valorUn)||0;
+    var cUn=N(it.custoUn)||0;
+    var cUnAdj=cUn*(1+extra);
+    valorTotal+=vUn*qtd;
+    custoTotal+=cUnAdj*qtd;
+    lucroTotal+=(vUn-cUnAdj)*qtd;
+  });
+  valorTotal+=N(orc.frete)||0;
+  var margem=valorTotal>0?(lucroTotal/valorTotal)*100:0;
+  var markup=custoTotal>0?valorTotal/custoTotal:0;
+  return{valorTotal:valorTotal,custoTotal:custoTotal,lucroTotal:lucroTotal,margem:margem,markup:markup};
+}
+
+function openOrcamento(existing){
+  if(existing){
+    S.editOrc=JSON.parse(JSON.stringify(existing));
+  } else {
+    S.editOrc={
+      numero:gerarNumOrc(""),
+      data:today(), cliente:"", celular:"", instagram:"",
+      formaPag:"pix", imposto:"Não", frete:0,
+      items:[{produto:"",tipo:"",cor:"",qtd:1,valorUn:0,custoUn:0}],
+      status:"Em aberto", obs:""
+    };
+  }
+  renderOrcModal();
+}
+
+function renderOrcModal(){
+  var orc=S.editOrc;
+  if(!orc) return;
+  var v=S.vars||getDefaultVars();
+  var totais=calcTotaisOrc(orc);
+  var isCredito=(orc.formaPag||"pix")==="credito";
+  var isImposto=(orc.imposto||"Não")==="Sim";
+  var clientes=[...new Set(S.pedidos.map(function(p){return p.Pessoa||"";}).filter(Boolean))].sort();
+
+  var H=[];
+  var a=function(s){H.push(s);};
+
+  a('<div class="modal-overlay" onclick="if(event.target===this)closeOrcModal()">');
+  a('<div class="modal" style="max-width:760px;width:95%;max-height:92vh;overflow-y:auto">');
+  a('<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">');
+  a('<h2 style="margin:0;font-size:18px">📋 '+(orc.numero?"Editar Orçamento":"Novo Orçamento")+'</h2>');
+  a('<button onclick="closeOrcModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280">✕</button>');
+  a('</div>');
+
+  // Header info
+  a('<div class="fgrid" style="margin-bottom:14px">');
+  a('<div><label class="flbl">Data do Orçamento</label>');
+  a('<input class="finp" type="date" value="'+orc.data+'" onchange="S.editOrc.data=this.value"/>');
+  a('</div>');
+  a('<div><label class="flbl">Nº do Orçamento</label>');
+  a('<input class="finp" type="text" value="'+orc.numero+'" style="background:#f9fafb;color:#6b7280" readonly/>');
+  a('</div>');
+  a('</div>');
+
+  a('<div class="fgrid" style="margin-bottom:14px">');
+  a('<div class="full"><label class="flbl">Nome do Cliente *</label>');
+  a('<input id="orc-cliente" class="finp" type="text" list="orc-cliente-list" value="'+orc.cliente+'" placeholder="Nome do cliente..."');
+  a(' oninput="S.editOrc.cliente=this.value;S.editOrc.numero=gerarNumOrc(this.value);\n    var ni=document.getElementById(\'orc-num-disp\');if(ni)ni.value=S.editOrc.numero;"/>');
+  a('<datalist id="orc-cliente-list">');
+  clientes.forEach(function(n){a('<option value="'+n+'">');});
+  a('</datalist></div>');
+  a('</div>');
+
+  a('<div class="fgrid" style="margin-bottom:14px">');
+  a('<div><label class="flbl">Celular</label>');
+  a('<input class="finp" type="text" inputmode="tel" value="'+orc.celular+'" placeholder="(xx) xxxxx-xxxx" oninput="S.editOrc.celular=this.value" maxlength="16"/>');
+  a('</div>');
+  a('<div><label class="flbl">Instagram</label>');
+  a('<input class="finp" type="text" value="'+orc.instagram+'" placeholder="@usuario" oninput="S.editOrc.instagram=this.value"/>');
+  a('</div>');
+  a('</div>');
+
+  // Products
+  a('<div style="margin-bottom:14px">');
+  a('<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">');
+  a('<label class="flbl" style="margin:0;font-weight:700">Produtos</label>');
+  a('<button onclick="addItemOrc()" style="padding:5px 12px;border-radius:7px;border:none;background:#4f46e5;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">+ Adicionar item</button>');
+  a('</div>');
+
+  (orc.items||[]).forEach(function(it,i){
+    var skuList=S.skus.slice().sort(function(a,b){return(a["Impressão"]||"").localeCompare(b["Impressão"]||"");});
+    a('<div style="background:#f9fafb;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #e5e7eb">');
+    a('<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">');
+    a('<span style="font-size:12px;font-weight:700;color:#6b7280">Item '+(i+1)+'</span>');
+    if((orc.items||[]).length>1){
+      a('<button onclick="removeItemOrc('+i+')" style="padding:2px 8px;border-radius:5px;border:none;background:#fee2e2;color:#ef4444;font-size:11px;cursor:pointer;font-weight:700">✕ Remover</button>');
+    }
+    a('</div>');
+    a('<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px">');
+    a('<div><label class="flbl">Produto *</label>');
+    a('<select class="fsel" onchange="onOrcProdChange('+i+',this.value)">');
+    a('<option value="">Selecione...</option>');
+    skuList.forEach(function(s){
+      var n=s["Impressão"]||"";
+      a('<option value="'+n+'"'+(it.produto===n?" selected":"")+'>'+n+'</option>');
+    });
+    a('</select></div>');
+    a('<div><label class="flbl">Tipo</label>');
+    a('<input class="finp" type="text" value="'+it.tipo+'" readonly style="background:#f3f4f6;color:#6b7280"/>');
+    a('</div>');
+    a('<div><label class="flbl">Cor</label>');
+    a('<input class="finp" type="text" list="orc-cor-list-'+i+'" value="'+it.cor+'" oninput="S.editOrc.items['+i+'].cor=this.value"/>');
+    var coresOpts=S.cores||[];
+    a('<datalist id="orc-cor-list-'+i+'">');
+    coresOpts.forEach(function(co){a('<option value="'+co+'">');});
+    a('</datalist></div>');
+    a('</div>');
+    a('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">');
+    a('<div><label class="flbl">Qtd</label>');
+    a('<input class="finp" type="text" inputmode="numeric" value="'+(it.qtd||1)+'" oninput="S.editOrc.items['+i+'].qtd=+this.value||1;renderOrcModal()"/>');
+    a('</div>');
+    a('<div><label class="flbl">Valor Unit. (R$)</label>');
+    a('<input class="finp" type="text" inputmode="decimal" value="'+(it.valorUn||"")+'" placeholder="0.00" oninput="S.editOrc.items['+i+'].valorUn=parseFloat(this.value)||0;renderOrcModal()"/>');
+    a('</div>');
+    a('<div><label class="flbl">Custo Unit. (R$)</label>');
+    a('<input class="finp" type="text" inputmode="decimal" value="'+(it.custoUn||"")+'" placeholder="0.00" oninput="S.editOrc.items['+i+'].custoUn=parseFloat(this.value)||0;renderOrcModal()"/>');
+    a('</div>');
+    a('</div>');
+    // Item total
+    var vTot=(it.valorUn||0)*(it.qtd||1);
+    a('<div style="text-align:right;margin-top:6px;font-size:12px;color:#4f46e5;font-weight:700">Total do item: '+R(vTot)+'</div>');
+    a('</div>');
+  });
+  a('</div>');
+
+  // Payment & extras
+  a('<div class="fgrid" style="margin-bottom:14px">');
+  a('<div><label class="flbl">Forma de Pagamento</label>');
+  a('<select class="fsel" onchange="S.editOrc.formaPag=this.value;renderOrcModal()">');
+  a('<option value="pix"'+(orc.formaPag==="pix"?" selected":"")+'>💰 À vista (Pix/Dinheiro)</option>');
+  a('<option value="credito"'+(orc.formaPag==="credito"?" selected":"")+'>💳 Cartão de Crédito</option>');
+  a('</select></div>');
+  a('<div><label class="flbl">Inclusão de Impostos</label>');
+  a('<select class="fsel" onchange="S.editOrc.imposto=this.value;renderOrcModal()">');
+  a('<option value="Não"'+(orc.imposto==="Não"?" selected":"")+'>Não</option>');
+  a('<option value="Sim"'+(orc.imposto==="Sim"?" selected":"")+'>Sim (+'+(v.impostoVenda||6)+'%)</option>');
+  a('</select></div>');
+  a('<div><label class="flbl">Frete (R$)</label>');
+  a('<input class="finp" type="text" inputmode="decimal" value="'+(orc.frete||"")+'" placeholder="0.00" oninput="S.editOrc.frete=parseFloat(this.value)||0;renderOrcModal()"/>');
+  a('</div>');
+  a('<div><label class="flbl">Status</label>');
+  a('<select class="fsel" onchange="S.editOrc.status=this.value">');
+  ["Em aberto","Convertido em pedido","Perdido"].forEach(function(s){
+    a('<option value="'+s+'"'+(orc.status===s?" selected":"")+'>'+s+'</option>');
+  });
+  a('</select></div>');
+  a('</div>');
+
+  // Extras info
+  if(isCredito||isImposto){
+    a('<div style="background:#fffbeb;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400e">');
+    if(isCredito) a('<div>💳 Taxa cartão: +'+(v.taxaCartao||3.5)+'% sobre custo</div>');
+    if(isImposto) a('<div>📋 Imposto: +'+(v.impostoVenda||6)+'% sobre custo</div>');
+    a('</div>');
+  }
+
+  // Totals summary
+  a('<div style="background:#f0fdf4;border-radius:12px;padding:14px;margin-bottom:16px">');
+  a('<h3 style="margin:0 0 10px;font-size:14px;color:#15803d">📊 Resumo do Orçamento</h3>');
+  a('<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">');
+  var tinfo=[
+    ["Valor Total",R(totais.valorTotal),"#4f46e5"],
+    ["Custo Total",R(totais.custoTotal),"#ef4444"],
+    ["Lucro Total",R(totais.lucroTotal),totais.lucroTotal>=0?"#16a34a":"#ef4444"],
+    ["Margem",totais.margem.toFixed(1)+"%",totais.margem>=30?"#16a34a":totais.margem>=15?"#d97706":"#ef4444"],
+    ["Markup","×"+totais.markup.toFixed(2),"#7c3aed"],
+    ["Frete",R(N(orc.frete)||0),"#6b7280"]
+  ];
+  tinfo.forEach(function(ti){
+    a('<div style="background:#fff;border-radius:8px;padding:8px;text-align:center">');
+    a('<div style="font-size:10px;color:#9ca3af">'+ti[0]+'</div>');
+    a('<div style="font-size:15px;font-weight:900;color:'+ti[2]+'">'+ti[1]+'</div>');
+    a('</div>');
+  });
+  a('</div></div>');
+
+  // Action buttons
+  a('<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">');
+  a('<button onclick="closeOrcModal()" style="padding:10px 18px;border-radius:9px;border:1px solid #e5e7eb;background:#fff;color:#374151;font-weight:700;cursor:pointer;font-family:inherit">Cancelar</button>');
+  a('<button onclick="gerarPDFOrcamento()" style="padding:10px 18px;border-radius:9px;border:none;background:#f59e0b;color:#fff;font-weight:700;cursor:pointer;font-family:inherit">📄 Gerar PDF</button>');
+  a('<button onclick="salvarOrcamento()" style="padding:10px 22px;border-radius:9px;border:none;background:#059669;color:#fff;font-weight:800;cursor:pointer;font-family:inherit">💾 Salvar Orçamento</button>');
+  a('</div>');
+
+  a('</div></div>');
+
+  // Inject into body overlay
+  var overlay=document.getElementById("orc-overlay");
+  if(!overlay){overlay=document.createElement("div");overlay.id="orc-overlay";document.body.appendChild(overlay);}
+  overlay.innerHTML=H.join("");
+}
+
+function closeOrcModal(){
+  var overlay=document.getElementById("orc-overlay");
+  if(overlay) overlay.innerHTML="";
+  S.editOrc=null;
+}
+
+function addItemOrc(){
+  if(!S.editOrc) return;
+  S.editOrc.items.push({produto:"",tipo:"",cor:"",qtd:1,valorUn:0,custoUn:0});
+  renderOrcModal();
+}
+
+function removeItemOrc(i){
+  if(!S.editOrc) return;
+  S.editOrc.items.splice(i,1);
+  renderOrcModal();
+}
+
+function onOrcProdChange(i,nome){
+  if(!S.editOrc) return;
+  var sku=S.skus.find(function(s){return(s["Impressão"]||"")===nome;});
+  S.editOrc.items[i].produto=nome;
+  if(sku){
+    S.editOrc.items[i].tipo=sku.Tipo||"";
+    // Suggest cost from calc
+    var v=S.vars||getDefaultVars();
+    var g=N(sku.FilamentoUnitario)||0, h=N(sku.TempoemHora)||0;
+    var cG=S.resumo.custoGrama||0.09;
+    var CFG=g*cG, TD=CFG*(v.taxaDesp/100), CEE=h*v.taxaEnergia, DEP=h*v.taxaDepreciacao;
+    var isCh=(sku.Tipo||"").toLowerCase()==="chaveiro";
+    var CHAV=isCh?(S.resumo.custoChaveiro||0.37):0;
+    S.editOrc.items[i].custoUn=Math.round((CFG+TD+CEE+DEP+CHAV)*100)/100;
+    if(!S.editOrc.items[i].valorUn){
+      S.editOrc.items[i].valorUn=Math.round(S.editOrc.items[i].custoUn*2.5*100)/100;
+    }
+  }
+  renderOrcModal();
+}
+
+async function salvarOrcamento(){
+  var orc=S.editOrc;
+  if(!orc||!orc.cliente){alert("Preencha o nome do cliente.");return;}
+  if(!(orc.items||[]).some(function(it){return it.produto;})){alert("Adicione pelo menos um produto.");return;}
+  var totais=calcTotaisOrc(orc);
+  // Initialize sheet headers if first time
+  try{
+    var existing=await readSheet(ORC_SHEET_ID,"Orçamentos!A1:A1");
+    if(!existing||!existing[0]||!existing[0][0]){
+      await updateRow(ORC_SHEET_ID,"Orçamentos!A1:P1",[
+        "Número Orçamento","Data","Cliente","Celular","Instagram",
+        "Forma Pagamento","Impostos","Frete","Produtos (JSON)",
+        "Valor Total","Custo Total","Lucro Total","Margem %","Markup","Status","Obs"
+      ]);
+    }
+  }catch(e){}
+  var row=[
+    orc.numero||gerarNumOrc(orc.cliente),
+    orc.data||today(),
+    orc.cliente,
+    orc.celular||"",
+    orc.instagram||"",
+    orc.formaPag||"pix",
+    orc.imposto||"Não",
+    totais.valorTotal-totais.valorTotal+(N(orc.frete)||0),
+    JSON.stringify(orc.items||[]),
+    totais.valorTotal,
+    totais.custoTotal,
+    totais.lucroTotal,
+    totais.margem.toFixed(2),
+    totais.markup.toFixed(2),
+    orc.status||"Em aberto",
+    orc.obs||""
+  ];
+  // Fix frete in row
+  row[7]=N(orc.frete)||0;
+
+  try{
+    // Check if editing existing
+    var isNew=true;
+    if(orc.numero){
+      var rows=await readSheet(ORC_SHEET_ID,"Orçamentos!A:A");
+      if(rows){
+        for(var i=1;i<rows.length;i++){
+          if(rows[i]&&rows[i][0]===orc.numero){
+            await updateRow(ORC_SHEET_ID,"Orçamentos!A"+(i+1)+":P"+(i+1),row);
+            isNew=false;break;
+          }
+        }
+      }
+    }
+    if(isNew) await appendSheet(ORC_SHEET_ID,"Orçamentos!A:P",[row]);
+    alert("Orçamento salvo com sucesso!");
+    closeOrcModal();
+    await loadOrcamentos();
+  }catch(e){alert("Erro ao salvar: "+e.message);}
+}
+
+function gerarPDFOrcamento(){
+  var orc=S.editOrc||{};
+  var totais=calcTotaisOrc(orc);
+  var v=S.vars||getDefaultVars();
+  var isCredito=(orc.formaPag==="credito");
+  var isImposto=(orc.imposto==="Sim");
+
+  var html="<!DOCTYPE html><html><head><meta charset='UTF-8'>";
+  html+="<title>Orçamento "+orc.numero+"</title>";
+  html+="<style>";
+  html+="body{font-family:Arial,sans-serif;margin:32px;color:#111;font-size:13px;}";
+  html+=".logo-area{text-align:center;margin-bottom:24px;border-bottom:2px solid #4f46e5;padding-bottom:16px;}";
+  html+=".logo-title{font-size:26px;font-weight:900;color:#4f46e5;}";
+  html+=".logo-sub{color:#6b7280;font-size:12px;}";
+  html+=".header-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;background:#f9fafb;padding:14px;border-radius:8px;}";
+  html+=".lbl{font-size:10px;color:#6b7280;text-transform:uppercase;font-weight:700;}";
+  html+=".val{font-size:13px;font-weight:600;color:#111;}";
+  html+="table{width:100%;border-collapse:collapse;margin-bottom:20px;}";
+  html+="th{background:#4f46e5;color:#fff;padding:8px 10px;text-align:left;font-size:12px;}";
+  html+="td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;}";
+  html+="tr:nth-child(even) td{background:#f9fafb;}";
+  html+=".total-box{background:#f0fdf4;border-radius:8px;padding:14px;margin-top:16px;}";
+  html+=".footer{margin-top:32px;text-align:center;color:#9ca3af;font-size:11px;border-top:1px solid #e5e7eb;padding-top:16px;}";
+  html+="@media print{body{margin:16px;}button{display:none;}}";
+  html+="</style></head><body>";
+
+  html+="<div class='logo-area'>";
+  html+="<div class='logo-title'>🖨️ Amalello Design</div>";
+  html+="<div class='logo-sub'>Impressão 3D · Design personalizado</div>";
+  html+="</div>";
+
+  html+="<div class='header-grid'>";
+  html+="<div><div class='lbl'>Nº do Orçamento</div><div class='val'>"+orc.numero+"</div></div>";
+  html+="<div><div class='lbl'>Data</div><div class='val'>"+orc.data+"</div></div>";
+  html+="<div><div class='lbl'>Cliente</div><div class='val'>"+orc.cliente+"</div></div>";
+  html+="<div><div class='lbl'>Celular</div><div class='val'>"+(orc.celular||"—")+"</div></div>";
+  if(orc.instagram) html+="<div><div class='lbl'>Instagram</div><div class='val'>"+orc.instagram+"</div></div>";
+  html+="<div><div class='lbl'>Forma de Pagamento</div><div class='val'>"+(isCredito?"Cartão de Crédito":"À Vista (Pix/Dinheiro)")+"</div></div>";
+  html+="</div>";
+
+  html+="<table><thead><tr><th>Produto</th><th>Tipo</th><th>Cor</th><th>Qtd</th><th>Valor Unit.</th><th>Total</th></tr></thead><tbody>";
+  (orc.items||[]).forEach(function(it){
+    var tot=(it.valorUn||0)*(it.qtd||1);
+    html+="<tr><td>"+it.produto+"</td><td>"+it.tipo+"</td><td>"+it.cor+"</td><td>"+it.qtd+"</td><td>R$ "+Number(it.valorUn||0).toFixed(2).replace(".",",")+"</td><td>R$ "+tot.toFixed(2).replace(".",",")+"</td></tr>";
+  });
+  html+="</tbody></table>";
+
+  html+="<div class='total-box'>";
+  html+="<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px'>";
+  if(N(orc.frete)>0) html+="<div><b>Frete:</b> R$ "+Number(orc.frete).toFixed(2).replace(".",",")+"</div>";
+  if(isCredito) html+="<div><b>Taxa Cartão (+"+(v.taxaCartao||3.5)+"%):</b> sobre custo</div>";
+  if(isImposto) html+="<div><b>Imposto (+"+(v.impostoVenda||6)+"%):</b> sobre custo</div>";
+  html+="</div>";
+  html+="<div style='margin-top:10px;font-size:18px;font-weight:900;color:#4f46e5'>VALOR TOTAL: R$ "+totais.valorTotal.toFixed(2).replace(".",",")+"</div>";
+  html+="</div>";
+
+  html+="<div class='footer'>Orçamento válido por 7 dias · Amalello Design · amalello-app.vercel.app<br>";
+  html+="<button onclick='window.print()' style='margin-top:12px;padding:10px 24px;background:#4f46e5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700'>🖨️ Imprimir / Salvar PDF</button>";
+  html+="</div>";
+  html+="</body></html>";
+
+  var w=window.open("","_blank","width=800,height=700");
+  if(w){w.document.write(html);w.document.close();}
+}
+
+// ─── ORÇAMENTOS PAGE ──────────────────────────────────────────────────────────
+function pgOrcamentos(){
+  if(S.lO) return '<div style="padding:40px;text-align:center"><div class="spinner"></div><p>Carregando orçamentos...</p></div>';
+  var orcs=S.orcamentos||[];
+  var bq=S.busca.toLowerCase();
+  var filtered=bq?orcs.filter(function(o){
+    return (o.cliente||"").toLowerCase().includes(bq)||(o.numero||"").toLowerCase().includes(bq)||
+           (o.items||[]).some(function(it){return(it.produto||"").toLowerCase().includes(bq);});
+  }):orcs;
+
+  var H=[];
+  var a=function(s){H.push(s);};
+  a('<h2>📋 Orçamentos</h2>');
+  a('<p class="sub">'+filtered.length+' orçamento(s)</p>');
+  a('<div class="sbar">');
+  a('<input id="search-input" class="sinp" placeholder="Buscar por cliente, produto ou nº orçamento..." value="'+S.busca+'" oninput="onBuscaInput(this.value)"/>');
+  a('<button onclick="openOrcamento(null)" style="padding:10px 18px;border-radius:9px;border:none;background:#059669;color:#fff;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;font-size:13px">📋 + Novo Orçamento</button>');
+  a('</div>');
+
+  if(!filtered.length){
+    a('<div style="text-align:center;padding:48px;color:#9ca3af">');
+    a('<div style="font-size:40px;margin-bottom:12px">📋</div>');
+    a('<div style="font-weight:700">Nenhum orçamento encontrado</div>');
+    a('</div>');
+    return H.join("");
+  }
+
+  a('<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">');
+  a('<thead><tr style="background:#f9fafb">');
+  ['Nº Orçamento','Data','Cliente','Qtd Itens','Valor Total','Custo Total','Lucro Total','Margem','Status','Ações'].forEach(function(h){
+    a('<th style="padding:8px 10px;text-align:left;color:#374151;font-weight:700;white-space:nowrap">'+h+'</th>');
+  });
+  a('</tr></thead><tbody>');
+
+  filtered.forEach(function(orc,i){
+    var mgColor=orc.margem>=30?"#16a34a":orc.margem>=15?"#d97706":"#ef4444";
+    var stColor=orc.status==="Convertido em pedido"?"#16a34a":orc.status==="Perdido"?"#ef4444":"#d97706";
+    a('<tr style="border-top:1px solid #f3f4f6">');
+    a('<td style="padding:8px 10px;font-weight:700;color:#4f46e5">'+orc.numero+'</td>');
+    a('<td style="color:#6b7280">'+orc.data+'</td>');
+    a('<td style="font-weight:600">'+orc.cliente+'</td>');
+    a('<td style="text-align:center">'+(orc.items||[]).length+'</td>');
+    a('<td style="font-weight:800;color:#4f46e5">'+R(orc.valorTotal)+'</td>');
+    a('<td style="color:#ef4444">'+R(orc.custoTotal)+'</td>');
+    a('<td style="color:'+(orc.lucroTotal>=0?"#16a34a":"#ef4444")+'">'+R(orc.lucroTotal)+'</td>');
+    a('<td style="font-weight:700;color:'+mgColor+'">'+Number(orc.margem||0).toFixed(1)+'%</td>');
+    a('<td><span style="padding:3px 8px;border-radius:5px;background:'+stColor+'1a;color:'+stColor+';font-weight:700;font-size:11px">'+orc.status+'</span></td>');
+    a('<td style="white-space:nowrap">');
+    a('<button onclick="openOrcamento(S.orcamentos['+i+'])" style="padding:4px 8px;border-radius:5px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;font-size:11px;margin-right:3px">✏️ Editar</button>');
+    a('<button onclick="converterOrcPed('+i+')" style="padding:4px 8px;border-radius:5px;border:none;background:#4f46e5;color:#fff;cursor:pointer;font-size:11px;margin-right:3px">➡️ Pedido</button>');
+    a('<button onclick="marcarOrcPerdido('+i+')" style="padding:4px 8px;border-radius:5px;border:none;background:#fee2e2;color:#ef4444;cursor:pointer;font-size:11px;margin-right:3px">❌ Perdido</button>');
+    a('<button onclick="clonarOrc('+i+')" style="padding:4px 8px;border-radius:5px;border:none;background:#f3f4f6;color:#374151;cursor:pointer;font-size:11px">📋 Clonar</button>');
+    a('</td>');
+    a('</tr>');
+    // Expand items detail
+    a('<tr style="border-top:none"><td colspan="10" style="padding:0 10px 8px;color:#6b7280;font-size:11px">');
+    (orc.items||[]).forEach(function(it){
+      a('<span style="margin-right:12px">'+it.produto+(it.cor?" · "+it.cor:"")+' × '+it.qtd+'</span>');
+    });
+    a('</td></tr>');
+  });
+  a('</tbody></table></div>');
+  return H.join("");
+}
+
+function converterOrcPed(i){
+  var orc=S.orcamentos[i];
+  if(!orc||orc.status==="Convertido em pedido"){return;}
+  if(!confirm("Converter orçamento em pedido? Isso abrirá o modal de novo pedido pré-preenchido.")) return;
+  // Pre-fill new order modal with first item
+  var it=(orc.items||[])[0]||{};
+  S.editModal={ped:{
+    "Data Venda":today(),"Pessoa":orc.cliente,"Impressão":it.produto||"",
+    Cor:it.cor||"",Realizado:"Não",Entregue:"Não",Pago:"Não",
+    Qtdd:it.qtd||1,"Preço unitário":it.valorUn||0
+  }};
+  S.editModal.isNew=true; S.editModal.returnFilter=null;
+  // Update status
+  orc.status="Convertido em pedido";
+  salvarStatusOrc(i,"Convertido em pedido");
+  go("pedidos");
+  setTimeout(function(){showEditModal();},300);
+}
+
+async function marcarOrcPerdido(i){
+  var orc=S.orcamentos[i];
+  if(!orc) return;
+  if(!confirm("Marcar orçamento como perdido?")) return;
+  orc.status="Perdido";
+  await salvarStatusOrc(i,"Perdido");
+}
+
+async function salvarStatusOrc(i,status){
+  try{
+    var rows=await readSheet(ORC_SHEET_ID,"Orçamentos!A:A");
+    var orc=S.orcamentos[i];
+    if(rows && orc){
+      for(var r=1;r<rows.length;r++){
+        if(rows[r]&&rows[r][0]===orc.numero){
+          await updateRow(ORC_SHEET_ID,"Orçamentos!O"+(r+1),[status]);
+          break;
+        }
+      }
+    }
+  }catch(e){console.error(e);}
+  render();
+}
+
+function clonarOrc(i){
+  var orig=S.orcamentos[i];
+  if(!orig) return;
+  var clone=JSON.parse(JSON.stringify(orig));
+  clone.numero=gerarNumOrc(clone.cliente)+"_C";
+  clone.data=today();
+  clone.status="Em aberto";
+  S.editOrc=clone;
+  renderOrcModal();
+}
+
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 showLogin();
