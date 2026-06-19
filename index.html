@@ -421,6 +421,45 @@ function calcInput(field,val,clear_sku){
     }
   },200);
 }
+// Debounce for orçamento modal inputs (prevents cursor jump)
+let _orcTimer=null;
+function orcItemInput(el){
+  var i=parseInt(el.getAttribute('data-idx'));
+  var field=el.getAttribute('data-field');
+  if(!S.editOrc||!S.editOrc.items||isNaN(i)) return;
+  if(field==='qtd') S.editOrc.items[i][field]=+el.value||1;
+  else S.editOrc.items[i][field]=parseFloat(String(el.value).replace(',','.'))||0;
+  clearTimeout(window._ot);
+  window._ot=setTimeout(function(){
+    var aid=document.activeElement?document.activeElement.id:'';
+    var apos=(document.activeElement&&document.activeElement.setSelectionRange)?document.activeElement.selectionStart:-1;
+    renderOrcModal();
+    if(aid){var el2=document.getElementById(aid);if(el2){el2.focus();try{var len=String(el2.value).length;el2.setSelectionRange((apos>=0&&apos<=len)?apos:len,(apos>=0&&apos<=len)?apos:len);}catch(ex){}}}
+  },200);
+}
+function orcInput(field,val,subfield){
+  if(subfield!==undefined){
+    // array item: field=index, val=value, subfield=field name
+    if(!S.editOrc||!S.editOrc.items) return;
+    S.editOrc.items[field][subfield]=parseFloat(String(val).replace(",","."))||0;
+  } else {
+    if(!S.editOrc) return;
+    S.editOrc[field]=parseFloat(String(val).replace(",","."))||0;
+  }
+  if(_orcTimer) clearTimeout(_orcTimer);
+  _orcTimer=setTimeout(function(){
+    var aid=document.activeElement?document.activeElement.id:"";
+    var apos=(document.activeElement&&document.activeElement.setSelectionRange)?document.activeElement.selectionStart:-1;
+    renderOrcModal();
+    if(aid){
+      var el=document.getElementById(aid);
+      if(el){
+        el.focus();
+        try{var len=String(el.value).length;var pos=(apos>=0&&apos<=len)?apos:len;el.setSelectionRange(pos,pos);}catch(e){}
+      }
+    }
+  },200);
+}
 // Handler dedicado para o campo de margem percentual
 function calcMargem(val){
   var v=Math.min(90,Math.max(1,parseFloat(val)||1));
@@ -1639,7 +1678,7 @@ function pgCalculadora(){
 async function loadOrcamentos(){
   S.lO=true; S.eO=null;
   try{
-    const rows=await readSheet(ORC_SHEET_ID,"Orçamentos!A:P");
+    const rows=await readSheet(ORC_SHEET_ID,"A:P");
     S.orcamentos=(rows||[]).slice(1).filter(function(r){return r[0];}).map(function(r){
       var items=[];
       try{items=JSON.parse(r[8]||"[]");}catch(e){}
@@ -1768,13 +1807,9 @@ function renderOrcModal(){
     a('</div>');
     a('<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px">');
     a('<div><label class="flbl">Produto *</label>');
-    a('<select class="fsel" onchange="onOrcProdChange('+i+',this.value)">');
-    a('<option value="">Selecione...</option>');
-    skuList.forEach(function(s){
-      var n=s["Impressão"]||"";
-      a('<option value="'+n+'"'+(it.produto===n?" selected":"")+'>'+n+'</option>');
-    });
-    a('</select></div>');
+    a('<input id="orc-prod-\'+(i)+\'" data-idx="\'+(i)+\'" class="finp" type="text" list="orc-sku-list-\'+(i)+\'" value="'+it.produto+'" placeholder="Buscar produto..." autocomplete="off" oninput="onOrcProdInput(parseInt(this.getAttribute(\'data-idx\')),this.value)"/>');
+    a('<datalist id="orc-sku-list-\'+(i)+\'">'+skuList.map(function(s){return '<option value="'+(s['Impressão']||'')+'">'; }).join('')+'</datalist>');
+    a('</div>');
     a('<div><label class="flbl">Tipo</label>');
     a('<input class="finp" type="text" value="'+it.tipo+'" readonly style="background:#f3f4f6;color:#6b7280"/>');
     a('</div>');
@@ -1787,13 +1822,13 @@ function renderOrcModal(){
     a('</div>');
     a('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">');
     a('<div><label class="flbl">Qtd</label>');
-    a('<input class="finp" type="text" inputmode="numeric" value="'+(it.qtd||1)+'" oninput="S.editOrc.items['+i+'].qtd=+this.value||1;renderOrcModal()"/>');
+    a('<input id="orc-qty-\'+(i)+\'" data-idx="\'+(i)+\'" data-field="qtd" class="finp" type="text" inputmode="numeric" value="\'+(it.qtd||1)+\'" oninput="orcItemInput(this)" />');
     a('</div>');
     a('<div><label class="flbl">Valor Unit. (R$)</label>');
-    a('<input class="finp" type="text" inputmode="decimal" value="'+(it.valorUn||"")+'" placeholder="0.00" oninput="S.editOrc.items['+i+'].valorUn=parseFloat(this.value)||0;renderOrcModal()"/>');
+    a('<input id="orc-vun-\'+(i)+\'" data-idx="\'+(i)+\'" data-field="valorUn" class="finp" type="text" inputmode="decimal" value="\'+(it.valorUn||\'\')+\'" placeholder="0.00" oninput="orcItemInput(this)" />');
     a('</div>');
     a('<div><label class="flbl">Custo Unit. (R$)</label>');
-    a('<input class="finp" type="text" inputmode="decimal" value="'+(it.custoUn||"")+'" placeholder="0.00" oninput="S.editOrc.items['+i+'].custoUn=parseFloat(this.value)||0;renderOrcModal()"/>');
+    a('<input id="orc-cun-\'+(i)+\'" data-idx="\'+(i)+\'" data-field="custoUn" class="finp" type="text" inputmode="decimal" value="\'+(it.custoUn||\'\')+\'" placeholder="0.00" oninput="orcItemInput(this)" />');
     a('</div>');
     a('</div>');
     // Item total
@@ -1816,7 +1851,7 @@ function renderOrcModal(){
   a('<option value="Sim"'+(orc.imposto==="Sim"?" selected":"")+'>Sim (+'+(v.impostoVenda||6)+'%)</option>');
   a('</select></div>');
   a('<div><label class="flbl">Frete (R$)</label>');
-  a('<input class="finp" type="text" inputmode="decimal" value="'+(orc.frete||"")+'" placeholder="0.00" oninput="S.editOrc.frete=parseFloat(this.value)||0;renderOrcModal()"/>');
+  a('<input class="finp" type="text" inputmode="decimal" value="'+(orc.frete||"")+'" placeholder="0.00" id="orc-frete" oninput="S.editOrc.frete=parseFloat(this.value)||0;clearTimeout(window._ot);window._ot=setTimeout(renderOrcModal,200)"/>');
   a('</div>');
   a('<div><label class="flbl">Status</label>');
   a('<select class="fsel" onchange="S.editOrc.status=this.value">');
@@ -1887,6 +1922,12 @@ function removeItemOrc(i){
   renderOrcModal();
 }
 
+function onOrcProdInput(i,val){
+  if(!S.editOrc||!S.editOrc.items||isNaN(i)) return;
+  S.editOrc.items[i].produto=val;
+  var sku=S.skus.find(function(s){return(s['Impressão']||'')==val;});
+  if(sku) onOrcProdChange(i,val);
+}
 function onOrcProdChange(i,nome){
   if(!S.editOrc) return;
   var sku=S.skus.find(function(s){return(s["Impressão"]||"")===nome;});
@@ -1915,9 +1956,9 @@ async function salvarOrcamento(){
   var totais=calcTotaisOrc(orc);
   // Initialize sheet headers if first time
   try{
-    var existing=await readSheet(ORC_SHEET_ID,"Orçamentos!A1:A1");
+    var existing=await readSheet(ORC_SHEET_ID,"A1:A1");
     if(!existing||!existing[0]||!existing[0][0]){
-      await updateRow(ORC_SHEET_ID,"Orçamentos!A1:P1",[
+      await updateRow(ORC_SHEET_ID,"A1:P1",[
         "Número Orçamento","Data","Cliente","Celular","Instagram",
         "Forma Pagamento","Impostos","Frete","Produtos (JSON)",
         "Valor Total","Custo Total","Lucro Total","Margem %","Markup","Status","Obs"
@@ -1949,17 +1990,17 @@ async function salvarOrcamento(){
     // Check if editing existing
     var isNew=true;
     if(orc.numero){
-      var rows=await readSheet(ORC_SHEET_ID,"Orçamentos!A:A");
+      var rows=await readSheet(ORC_SHEET_ID,"A:A");
       if(rows){
         for(var i=1;i<rows.length;i++){
           if(rows[i]&&rows[i][0]===orc.numero){
-            await updateRow(ORC_SHEET_ID,"Orçamentos!A"+(i+1)+":P"+(i+1),row);
+            await updateRow(ORC_SHEET_ID,"A1"+(i+1)+":P"+(i+1),row);
             isNew=false;break;
           }
         }
       }
     }
-    if(isNew) await appendSheet(ORC_SHEET_ID,"Orçamentos!A:P",[row]);
+    if(isNew) await appendSheet(ORC_SHEET_ID,"A:P",[row]);
     alert("Orçamento salvo com sucesso!");
     closeOrcModal();
     await loadOrcamentos();
@@ -2125,12 +2166,12 @@ async function marcarOrcPerdido(i){
 
 async function salvarStatusOrc(i,status){
   try{
-    var rows=await readSheet(ORC_SHEET_ID,"Orçamentos!A:A");
+    var rows=await readSheet(ORC_SHEET_ID,"A:A");
     var orc=S.orcamentos[i];
     if(rows && orc){
       for(var r=1;r<rows.length;r++){
         if(rows[r]&&rows[r][0]===orc.numero){
-          await updateRow(ORC_SHEET_ID,"Orçamentos!O"+(r+1),[status]);
+          await updateRow(ORC_SHEET_ID,"O"+(r+1),[status]);
           break;
         }
       }
