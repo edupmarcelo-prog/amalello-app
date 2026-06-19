@@ -212,7 +212,20 @@ let S={
 };
 
 // ─── LOAD DATA ────────────────────────────────────────────────────────────────
-async function loadAll(){Object.keys(_c).forEach(k=>delete _c[k]);await Promise.all([loadPed(),loadSku(),loadCon(),loadApoio(),loadResumo()]);}
+async function loadAll(){
+  // Show syncing indicator
+  const sl=document.getElementById("sync-lbl");
+  const st=document.getElementById("sync-time");
+  if(sl){sl.style.display="block";sl.style.opacity="0.6";}
+  if(st) st.textContent="Sincronizando...";
+  // Clear all cache to guarantee fresh data
+  Object.keys(_c).forEach(k=>delete _c[k]);
+  await Promise.all([loadPed(),loadSku(),loadCon(),loadApoio(),loadResumo()]);
+  // Mark sync time
+  S.att=new Date().toLocaleTimeString("pt-BR");
+  if(sl){sl.style.opacity="1";}
+  if(st) st.textContent=S.att;
+}
 
 async function loadPed(){
   S.lP=true;S.eP=null;render();
@@ -1311,7 +1324,27 @@ function showApp(){
   try{const v=localStorage.getItem("amalello_vars");if(v)S.vars={...getDefaultVars(),...JSON.parse(v)};}catch(e){}
   if(!S.vars)S.vars=getDefaultVars();
   render();
-  loadAll(); // Auto-sincroniza ao abrir o app
+  loadAll(); // Sincroniza ao abrir o app
+
+  // Auto-refresh quando o usuário volta para a aba/app
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible' && gToken){
+      loadAll();
+    }
+  });
+
+  // Auto-refresh ao focar janela (útil em mobile)
+  window.addEventListener('focus', function(){
+    if(gToken) loadAll();
+  });
+
+  // Auto-refresh a cada 5 minutos em background
+  if(window._autoRefresh) clearInterval(window._autoRefresh);
+  window._autoRefresh = setInterval(function(){
+    if(gToken && document.visibilityState === 'visible'){
+      loadAll();
+    }
+  }, 5 * 60 * 1000);
 }
 
 // ─── FATORES VARIÁVEIS ───────────────────────────────────────────────────────
