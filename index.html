@@ -2060,7 +2060,7 @@ async function salvarOrcamento(){
     }
     // Append new rows
     for(var i=0;i<rows.length;i++){
-      await appendSheet(ORC_SHEET_ID,"A:R",[rows[i]]);
+      await appendSheet(ORC_SHEET_ID,"A:R",rows[i]);
     }
     alert("Orçamento "+numero+" salvo!");
     closeOrcModal();
@@ -2090,11 +2090,12 @@ function gerarPDFOrcamento(){
   html+="tr:nth-child(even) td{background:#f9fafb;}";
   html+=".total-box{background:#f0fdf4;border-radius:8px;padding:14px;margin-top:16px;}";
   html+=".footer{margin-top:32px;text-align:center;color:#9ca3af;font-size:11px;border-top:1px solid #e5e7eb;padding-top:16px;}";
-  html+="@media print{body{margin:16px;}button{display:none;}}";
+  html+="@media print{body{margin:16px;}button{display:none!important;}}";
   html+="</style></head><body>";
 
   html+="<div class='logo-area'>";
-  html+="<div class='logo-title'>🖨️ Amalello Design</div>";
+  html+="<img src='https://drive.google.com/uc?export=view&id=1xekrGFtKzAR3Cp98y6jsxQkhte-gQrz6' alt='Amalello Design' style='max-height:80px;max-width:220px;object-fit:contain;margin-bottom:8px' onerror='this.style.display=\"none\"'/>";
+  html+="<div class='logo-title'>Amalello Design</div>";
   html+="<div class='logo-sub'>Impressão 3D · Design personalizado</div>";
   html+="</div>";
 
@@ -2130,7 +2131,10 @@ function gerarPDFOrcamento(){
   html+="<span>📱 Eduardo: (11) 98751-2928</span>";
   html+="<span>📱 Isabela: (11) 98955-5644</span>";
   html+="</div>";
-  html+="<button onclick='window.print()' style='margin-top:12px;padding:10px 24px;background:#4f46e5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700'>🖨️ Imprimir / Salvar PDF</button>";
+  html+="<div style='margin-top:14px;display:flex;gap:10px;justify-content:center'>";
+  html+="<button onclick='window.print()' style='padding:10px 24px;background:#4f46e5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700'>🖨️ Imprimir / Salvar PDF</button>";
+  html+="<button onclick='window.close()' style='padding:10px 20px;background:#6b7280;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700'>✕ Fechar</button>";
+  html+="</div>";
   html+="</div>";
   html+="</body></html>";
 
