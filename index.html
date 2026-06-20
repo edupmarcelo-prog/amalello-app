@@ -1688,23 +1688,52 @@ function pgCalculadora(){
 async function loadOrcamentos(){
   S.lO=true; S.eO=null;
   try{
-    const rows=await readSheet(ORC_SHEET_ID,"A:P");
-    S.orcamentos=(rows||[]).slice(1).filter(function(r){return r[0];}).map(function(r){
-      var items=[];
-      try{items=JSON.parse(r[8]||"[]");}catch(e){}
-      return{
-        numero:r[0]||"", data:r[1]||"", cliente:r[2]||"", celular:r[3]||"", instagram:r[4]||"",
-        formaPag:r[5]||"pix", imposto:r[6]||"Não", frete:N(r[7])||0,
-        items:items,
-        valorTotal:N(r[9])||0, custoTotal:N(r[10])||0, lucroTotal:N(r[11])||0,
-        margem:N(r[12])||0, markup:N(r[13])||0, status:r[14]||"Em aberto", obs:r[15]||""
-      };
+    var rows=await readSheet(ORC_SHEET_ID,"A:R");
+    if(!rows||rows.length<2){S.orcamentos=[];S.lO=false;render();return;}
+    // Row 0 = header, row 1+ = data (including template rows)
+    var dataRows=rows.slice(1);
+    // Group rows by orçamento number (col E) or date+client fallback
+    var orcMap={};
+    dataRows.forEach(function(row,ri){
+      if(!row||!row[0]) return;
+      var dataVal=String(row[0]||"");
+      // Skip header/label rows
+      if(dataVal==="Data Orçamento"||dataVal==="Celula A1"||dataVal==="Celula A2") return;
+      var numero=String(row[4]||"");
+      var cliente=String(row[1]||"");
+      var key=numero||(dataVal+"_"+cliente);
+      if(!key||key==="_") return;
+      if(!orcMap[key]){
+        orcMap[key]={
+          numero:numero, data:dataVal, cliente:cliente,
+          celular:String(row[2]||""), instagram:String(row[3]||""),
+          items:[], valorTotal:0, custoTotal:0, lucroTotal:0,
+          margem:0, markup:0, status:String(row[17]||"Em aberto"),
+          _rowNums:[]
+        };
+      }
+      var qtd=N(row[8])||1;
+      var valorUn=N(row[9])||0;
+      var custoUn=N(row[11])||0;
+      var kVal=N(row[10])||0;
+      var mVal=N(row[12])||0;
+      var oVal=N(row[14])||0;
+      orcMap[key].items.push({produto:String(row[5]||""),tipo:String(row[6]||""),
+        cor:String(row[7]||""),qtd:qtd,valorUn:valorUn,custoUn:custoUn});
+      orcMap[key].valorTotal+=kVal||valorUn*qtd;
+      orcMap[key].custoTotal+=mVal||custoUn*qtd;
+      orcMap[key].lucroTotal+=oVal||(valorUn-custoUn)*qtd;
+      orcMap[key]._rowNums.push(ri+2); // actual sheet row (1-based, +1 for header)
+    });
+    S.orcamentos=Object.values(orcMap).filter(function(o){return o.cliente;});
+    S.orcamentos.forEach(function(o){
+      o.margem=o.valorTotal>0?(o.lucroTotal/o.valorTotal)*100:0;
+      o.markup=o.custoTotal>0?o.valorTotal/o.custoTotal:0;
     });
     S.orcamentos.sort(function(a,b){return b.numero.localeCompare(a.numero);});
   }catch(e){S.eO=e.message||String(e);}
   S.lO=false; render();
 }
-
 function gerarNumOrc(clienteNome){
   var now=new Date();
   var y=now.getFullYear();
@@ -1961,61 +1990,83 @@ function onOrcProdChange(i,nome){
 async function salvarOrcamento(){
   var orc=S.editOrc;
   if(!orc||!orc.cliente){alert("Preencha o nome do cliente.");return;}
-  if(!(orc.items||[]).some(function(it){return it.produto;})){alert("Adicione pelo menos um produto.");return;}
-  var totais=calcTotaisOrc(orc);
-  // Initialize sheet headers if first time
-  try{
-    var existing=await readSheet(ORC_SHEET_ID,"A1:A1");
-    if(!existing||!existing[0]||!existing[0][0]){
-      await updateRow(ORC_SHEET_ID,"A1:P1",[
-        "Número Orçamento","Data","Cliente","Celular","Instagram",
-        "Forma Pagamento","Impostos","Frete","Produtos (JSON)",
-        "Valor Total","Custo Total","Lucro Total","Margem %","Markup","Status","Obs"
-      ]);
-    }
-  }catch(e){}
-  var row=[
-    orc.numero||gerarNumOrc(orc.cliente),
-    orc.data||today(),
-    orc.cliente,
-    orc.celular||"",
-    orc.instagram||"",
-    orc.formaPag||"pix",
-    orc.imposto||"Não",
-    totais.valorTotal-totais.valorTotal+(N(orc.frete)||0),
-    JSON.stringify(orc.items||[]),
-    totais.valorTotal,
-    totais.custoTotal,
-    totais.lucroTotal,
-    totais.margem.toFixed(2),
-    totais.markup.toFixed(2),
-    orc.status||"Em aberto",
-    orc.obs||""
-  ];
-  // Fix frete in row
-  row[7]=N(orc.frete)||0;
+  var validItems=(orc.items||[]).filter(function(it){return it.produto;});
+  if(!validItems.length){alert("Adicione pelo menos um produto.");return;}
+
+  var v=S.vars||getDefaultVars();
+  var isCredito=(orc.formaPag||"pix")==="credito";
+  var isImposto=(orc.imposto||"Não")==="Sim";
+  var txCartao=isCredito?(v.taxaCartao||3.5)/100:0;
+  var txImposto=isImposto?(v.impostoVenda||6)/100:0;
+
+  // Instagram: add @ if missing
+  var instagram=String(orc.instagram||"").trim();
+  if(instagram&&!instagram.startsWith("@")) instagram="@"+instagram;
+
+  // Date: convert YYYY-MM-DD → DD/MM/YYYY
+  var dataStr=orc.data||today();
+  if(dataStr.includes("-")){
+    var dp=dataStr.split("-");
+    if(dp.length===3) dataStr=dp[2]+"/"+dp[1]+"/"+dp[0];
+  }
+
+  // Orçamento number: use existing or generate
+  var numero=orc.numero||gerarNumOrc(orc.cliente);
+
+  // Build one row per item
+  var rows=[];
+  validItems.forEach(function(it){
+    var qtd=N(it.qtd)||1;
+    var valorUn=Math.round((N(it.valorUn)||0)*100)/100;
+    var custoBase=Math.round((N(it.custoUn)||0)*100)/100;
+    var custoAdj=Math.round(custoBase*(1+txCartao+txImposto)*100)/100;
+    var valorTotal=Math.round(valorUn*qtd*100)/100;
+    var custoTotal=Math.round(custoAdj*qtd*100)/100;
+    var lucroUn=Math.round((valorUn-custoAdj)*100)/100;
+    var lucroTotal=Math.round(lucroUn*qtd*100)/100;
+    var margem=valorUn>0?Math.round((lucroUn/valorUn)*10000)/100:0;
+    var markup=custoAdj>0?Math.round((valorUn/custoAdj)*100)/100:0;
+    rows.push([
+      dataStr,          // A Data Orçamento
+      orc.cliente||"", // B Pessoa
+      orc.celular||"", // C Celular
+      instagram,        // D Instagram
+      numero,           // E Número Orçamento
+      it.produto||"",  // F Impressão
+      it.tipo||"",     // G Familia
+      it.cor||"",      // H Cor
+      qtd,              // I Quantidade
+      valorUn,          // J Valor Unitário
+      valorTotal,       // K Valor Total
+      custoAdj,         // L Custo Unitário (ajustado por cartão/imposto)
+      custoTotal,       // M Custo Total
+      lucroUn,          // N Lucro Unitário
+      lucroTotal,       // O Lucro Total
+      margem+"%",       // P Margem de Lucro
+      markup,           // Q Markup
+      "Em aberto"       // R Status
+    ]);
+  });
 
   try{
-    // Check if editing existing
-    var isNew=true;
-    if(orc.numero){
-      var rows=await readSheet(ORC_SHEET_ID,"A:A");
-      if(rows){
-        for(var i=1;i<rows.length;i++){
-          if(rows[i]&&rows[i][0]===orc.numero){
-            await updateRow(ORC_SHEET_ID,"A1"+(i+1)+":P"+(i+1),row);
-            isNew=false;break;
-          }
-        }
+    // If editing: update existing rows, else append
+    if(orc._rowNums&&orc._rowNums.length>0){
+      // Delete existing rows and re-append (simplest approach for edit)
+      // Clear each row first
+      for(var r=0;r<orc._rowNums.length;r++){
+        await updateRow(ORC_SHEET_ID,"A"+orc._rowNums[r]+":R"+orc._rowNums[r],
+          ["","","","","","","","","","","","","","","","","",""]);
       }
     }
-    if(isNew) await appendSheet(ORC_SHEET_ID,"A:P",[row]);
-    alert("Orçamento salvo com sucesso!");
+    // Append new rows
+    for(var i=0;i<rows.length;i++){
+      await appendSheet(ORC_SHEET_ID,"A:R",[rows[i]]);
+    }
+    alert("Orçamento "+numero+" salvo!");
     closeOrcModal();
     await loadOrcamentos();
   }catch(e){alert("Erro ao salvar: "+e.message);}
 }
-
 function gerarPDFOrcamento(){
   var orc=S.editOrc||{};
   var totais=calcTotaisOrc(orc);
@@ -2072,7 +2123,13 @@ function gerarPDFOrcamento(){
   html+="<div style='margin-top:10px;font-size:18px;font-weight:900;color:#4f46e5'>VALOR TOTAL: R$ "+totais.valorTotal.toFixed(2).replace(".",",")+"</div>";
   html+="</div>";
 
-  html+="<div class='footer'>Orçamento válido por 7 dias · Amalello Design · amalello-app.vercel.app<br>";
+  html+="<div class=\'footer\'>";
+  html+="<div style=\'margin-bottom:8px\'>Orçamento válido por 7 dias · Amalello Design</div>";
+  html+="<div style=\'display:flex;justify-content:center;gap:24px;flex-wrap:wrap;font-size:13px;margin-top:6px\'>";
+  html+="<span>📸 @amalellodesign</span>";
+  html+="<span>📱 Eduardo: (11) 98751-2928</span>";
+  html+="<span>📱 Isabela: (11) 98955-5644</span>";
+  html+="</div>";
   html+="<button onclick='window.print()' style='margin-top:12px;padding:10px 24px;background:#4f46e5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700'>🖨️ Imprimir / Salvar PDF</button>";
   html+="</div>";
   html+="</body></html>";
