@@ -191,6 +191,13 @@ async function updateCell(id,range,value){
   const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,{method:"PUT",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:JSON.stringify({values:[[value]]})});
   if(!res.ok){const e=await res.json();throw new Error(e?.error?.message||"Erro update");}
 }
+async function clearSheetRange(id,range){
+  if(!gToken) throw new Error("Não autenticado");
+  const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}:clear`,{
+    method:"POST",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:"{}"
+  });
+  if(!res.ok) throw new Error("Clear failed: "+(await res.text()).slice(0,100));
+}
 async function updateRow(id,range,values){
   if(!gToken) throw new Error("Não autenticado");
   const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,{method:"PUT",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:JSON.stringify({values:[values]})});
@@ -1695,9 +1702,9 @@ function pgCalculadora(){
 async function loadOrcamentos(){
   S.lO=true; S.eO=null;
   try{
-    var rows=await readSheet(ORC_SHEET_ID,"A:R");
+    var rows=await readSheet(ORC_SHEET_ID,"A2:R");
     if(!rows||rows.length<2){S.orcamentos=[];S.lO=false;render();return;}
-    // Row 0 = header, row 1+ = data (including template rows)
+    // rows[0]=header(row2), rows[1+]=data rows starting at sheet row 3
     var dataRows=rows.slice(1);
     // Group rows by orçamento number (col E) or date+client fallback
     var orcMap={};
@@ -1730,7 +1737,7 @@ async function loadOrcamentos(){
       orcMap[key].valorTotal+=kVal||valorUn*qtd;
       orcMap[key].custoTotal+=mVal||custoUn*qtd;
       orcMap[key].lucroTotal+=oVal||(valorUn-custoUn)*qtd;
-      orcMap[key]._rowNums.push(ri+2); // actual sheet row (1-based, +1 for header)
+      orcMap[key]._rowNums.push(ri+3); // sheet row: range starts at row2, +1 for header, +ri
     });
     S.orcamentos=Object.values(orcMap).filter(function(o){return o.cliente;});
     S.orcamentos.forEach(function(o){
@@ -2057,21 +2064,29 @@ async function salvarOrcamento(){
   });
 
   try{
-    var isEditing=orc._rowNums&&orc._rowNums.length>0;
-    if(isEditing){
-      // Find ALL rows with this numero (col E, index 4) and clear them
-      var sheetRows=await readSheet(ORC_SHEET_ID,"A:R");
-      var blank=["","","","","","","","","","","","","","","","","",""];
-      if(sheetRows){
-        for(var r=1;r<sheetRows.length;r++){
-          if(sheetRows[r]&&String(sheetRows[r][4]||"")==String(numero)){
-            await updateRow(ORC_SHEET_ID,"A"+(r+1)+":R"+(r+1),blank);
-          }
-        }
+    var oldRowNums=orc._rowNums||[];
+    var numOld=oldRowNums.length;
+    var numNew=rows.length;
+
+    if(numOld>0){
+      // EDIT: overwrite existing rows IN-PLACE (no blank rows created)
+      var toUpdate=Math.min(numOld,numNew);
+      for(var i=0;i<toUpdate;i++){
+        await updateRow(ORC_SHEET_ID,"A"+oldRowNums[i]+":R"+oldRowNums[i],rows[i]);
       }
-    }
-    for(var i=0;i<rows.length;i++){
-      await appendSheet(ORC_SHEET_ID,"A:R",rows[i]);
+      // Extra new items (user added items): append
+      for(var i=toUpdate;i<numNew;i++){
+        await appendSheet(ORC_SHEET_ID,"A:R",rows[i]);
+      }
+      // Excess old rows (user removed items): clear them truly
+      for(var i=toUpdate;i<numOld;i++){
+        await clearSheetRange(ORC_SHEET_ID,"A"+oldRowNums[i]+":R"+oldRowNums[i]);
+      }
+    } else {
+      // NEW orçamento: just append
+      for(var i=0;i<rows.length;i++){
+        await appendSheet(ORC_SHEET_ID,"A:R",rows[i]);
+      }
     }
     alert("Orçamento "+numero+" salvo!");
     closeOrcModal();
@@ -2247,20 +2262,19 @@ async function marcarOrcPerdido(i){
 }
 
 async function salvarStatusOrc(i,status){
+  var orc=S.orcamentos[i];
+  if(!orc) return;
   try{
-    var rows=await readSheet(ORC_SHEET_ID,"A:A");
-    var orc=S.orcamentos[i];
-    if(rows && orc){
-      for(var r=1;r<rows.length;r++){
-        if(rows[r]&&rows[r][0]===orc.numero){
-          await updateRow(ORC_SHEET_ID,"O"+(r+1),[status]);
-          break;
-        }
+    if(orc._rowNums&&orc._rowNums.length>0){
+      for(var rr=0;rr<orc._rowNums.length;rr++){
+        await updateRow(ORC_SHEET_ID,"R"+orc._rowNums[rr],[status]);
       }
     }
-  }catch(e){console.error(e);}
+    orc.status=status;
+  }catch(e){alert("Erro status: "+e.message);}
   render();
 }
+
 
 function clonarOrc(i){
   var orig=S.orcamentos[i];
