@@ -176,12 +176,16 @@ function doLogin(){if(!tokenClient){setTimeout(doLogin,300);return;}tokenClient.
 
 // ─── API + CACHE ──────────────────────────────────────────────────────────────
 const _c={};
-async function readSheet(id,range){
+async function readSheet(id,range,_att){
   if(!gToken) throw new Error("Não autenticado");
   const k=id+"|"+range, now=Date.now();
-  if(_c[k]&&now-_c[k].t<120000) return _c[k].v;
+  if(_c[k]&&now-_c[k].t<600000) return _c[k].v;
   const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}`,{headers:{Authorization:"Bearer "+gToken}});
-  if(!res.ok){const e=await res.json();throw new Error(e?.error?.message||"Erro "+res.status);}
+  if(res.status===429||res.status===503){
+  if((_att||0)<3){await new Promise(r=>setTimeout(r,Math.pow(2,(_att||0)+1)*1500));return readSheet(id,range,(_att||0)+1);}
+  throw new Error("Quota excedida. Aguarde e tente novamente.");
+}
+if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e?.error?.message||"Erro "+res.status);}
   const v=(await res.json()).values||[];
   _c[k]={v,t:now};
   return v;
@@ -227,19 +231,22 @@ let S={
 };
 
 // ─── LOAD DATA ────────────────────────────────────────────────────────────────
-async function loadAll(){
-  // Show syncing indicator
-  const sl=document.getElementById("sync-lbl");
-  const st=document.getElementById("sync-time");
+let _laRun=false,_lastLA=0;
+async function loadAll(force){
+  if(_laRun||(!force&&Date.now()-_lastLA<300000))return;
+  _laRun=true;
+  const sl=document.getElementById("sync-lbl"),st=document.getElementById("sync-time");
   if(sl){sl.style.display="block";sl.style.opacity="0.6";}
-  if(st) st.textContent="Sincronizando...";
-  // Clear all cache to guarantee fresh data
-  Object.keys(_c).forEach(k=>delete _c[k]);
-  await Promise.all([loadPed(),loadSku(),loadCon(),loadApoio(),loadResumo(),loadOrcamentos()]);
-  // Mark sync time
+  if(st)st.textContent="Sincronizando...";
+  if(force)Object.keys(_c).forEach(k=>delete _c[k]);
+  try{
+    await loadPed();await loadSku();await loadApoio();
+    await Promise.all([loadCon(),loadResumo(),loadOrcamentos()]);
+  }catch(e){console.warn("loadAll:",e);}
+  _lastLA=Date.now();_laRun=false;
   S.att=new Date().toLocaleTimeString("pt-BR");
-  if(sl){sl.style.opacity="1";}
-  if(st) st.textContent=S.att;
+  if(sl)sl.style.opacity="1";
+  if(st)st.textContent=S.att;
 }
 
 async function loadPed(){
@@ -1383,7 +1390,7 @@ function showApp(){
       </div>
       <div class="sb-nav" id="nav"></div>
       <div class="sb-ft">
-        <button class="sync-btn" onclick="loadAll()">🔄 Sincronizar planilhas</button>
+        <button class="sync-btn" onclick="loadAll(true)">🔄 Sincronizar planilhas</button>
         <div class="user-box">
           <div style="color:#3f3f46;font-size:10px;font-weight:700;text-transform:uppercase">Admin</div>
           <div id="user-info" style="color:#a1a1aa;font-size:12px;margin-top:2px"></div>
@@ -1418,7 +1425,7 @@ function showApp(){
     if(gToken && document.visibilityState === 'visible'){
       loadAll();
     }
-  }, 5 * 60 * 1000);
+  }, 15 * 60 * 1000);
 }
 
 // ─── FATORES VARIÁVEIS ───────────────────────────────────────────────────────
