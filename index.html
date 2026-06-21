@@ -246,7 +246,7 @@ async function loadPed(){
   S.lP=true;S.eP=null;render();
   try{
     // Data starts at row 5 (header row 4), so fetch from A4
-    const rows=await readSheet(SHEET_ID,"Pedidos!A4:AC");
+    const rows=await readSheet(SHEET_ID,"Pedidos!A4:AE");
     if(!rows||rows.length<2){S.pedidos=[];S.lP=false;render();return;}
     // Row 0 = headers (row 4 in sheet), data starts at row 1
     // Cols: A(0)=DataVenda B(1)=Pessoa C(2)=Impressão D(3)=Familia E(4)=Cor
@@ -279,6 +279,8 @@ async function loadPed(){
       CustoTotal:r[25]||0,
       Mes:r[27]||"",
       Ano:r[28]||"",
+      "Número do Orçamento":r[29]||"",
+      "Data Orçamento":r[30]||"",
     }));
     // Sort newest first
     S.pedidos.sort(function(a,b){
@@ -998,6 +1000,10 @@ async function salvarPedido(){
       // Observação col Q (se Custom)
       if((ped["Impressão"]||"").toLowerCase().includes("custom")&&ped.Observacao!==undefined){
         await updateRow(SHEET_ID,`Pedidos!Q${rowNum}`,[ped.Observacao||""]);
+      }
+      // Write AD:AE (Número Orçamento, Data Orçamento) if present
+      if(ped["Número do Orçamento"]||ped["Data Orçamento"]){
+        await updateRow(SHEET_ID,`Pedidos!AD${rowNum}:AE${rowNum}`,[ped["Número do Orçamento"]||"",ped["Data Orçamento"]||""]);
       }
       // NÃO escreve: D(Família), I(Check), M(Valor), N(ValorRecebido) — são fórmulas
     }
@@ -2235,22 +2241,126 @@ function pgOrcamentos(){
 async function converterOrcPed(i){
   var orc=S.orcamentos[i];
   if(!orc) return;
-  if(orc.status==="Convertido"){alert("Este orçamento já foi convertido.");return;}
-  if(!confirm("Converter orçamento em pedido? Isso abrirá o modal de novo pedido pré-preenchido.")) return;
-  await salvarStatusOrc(i,"Convertido");
-  // Pre-fill new order modal with first item
-  var it=(orc.items||[])[0]||{};
-  S.editModal={ped:{
-    "Data Venda":today(),"Pessoa":orc.cliente,"Impressão":it.produto||"",
-    Cor:it.cor||"",Realizado:"Não",Entregue:"Não",Pago:"Não",
-    Qtdd:it.qtd||1,"Preço unitário":it.valorUn||0
-  }};
-  S.editModal.isNew=true; S.editModal.returnFilter=null;
-  // Update status
-  orc.status="Convertido em pedido";
-  salvarStatusOrc(i,"Convertido em pedido");
-  go("pedidos");
-  setTimeout(function(){showEditModal();},300);
+  if(orc.status==="Convertido"){alert("Este orçamento #"+orc.numero+" já foi convertido em pedido.");return;}
+  S.convModal={orc:orc,idx:i,realizado:"Não",entregue:"Não",pago:"Não"};
+  renderConvModal();
+}
+
+function renderConvModal(){
+  var cm=S.convModal; if(!cm) return;
+  var orc=cm.orc;
+  var H=[]; var a=function(s){H.push(s);};
+  a('<div class="modal-overlay" onclick="if(event.target===this)closeConvModal()">');
+  a('<div class="modal" style="max-width:580px;width:95%;max-height:88vh;overflow-y:auto">');
+  a('<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">');
+  a('<h2 style="margin:0;font-size:18px">➡️ Converter em Pedido</h2>');
+  a('<button onclick="closeConvModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280">✕</button>');
+  a('</div>');
+  // Orçamento summary
+  a('<div style="background:#eff6ff;border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid #bfdbfe">');
+  a('<div style="font-weight:700;color:#1d4ed8;margin-bottom:4px">📋 '+orc.numero+'</div>');
+  a('<div style="font-size:12px;color:#374151"><b>Cliente:</b> '+orc.cliente+' · <b>Data:</b> '+orc.data+'</div>');
+  a('<div style="margin-top:8px">');
+  (orc.items||[]).filter(function(it){return it.produto;}).forEach(function(it,k){
+    a('<div style="font-size:12px;padding:5px 0;border-bottom:1px solid #dbeafe;display:flex;justify-content:space-between">');
+    a('<span><b>'+(k+1)+'.</b> '+it.produto+(it.cor?' · <em>'+it.cor+'</em>':'')+'</span>');
+    a('<span style="color:#1d4ed8">× '+it.qtd+' &nbsp; R$ '+(it.valorUn||0).toFixed(2)+'</span>');
+    a('</div>');
+  });
+  a('</div></div>');
+  // Status fields
+  a('<p style="font-size:12px;color:#6b7280;margin:0 0 10px">Defina o status inicial para <b>todos os '+((orc.items||[]).filter(function(it){return it.produto;}).length)+'</b> pedido(s):</p>');
+  a('<div class="fgrid" style="margin-bottom:16px">');
+  ['realizado','entregue','pago'].forEach(function(field){
+    var label=field.charAt(0).toUpperCase()+field.slice(1);
+    a('<div><label class="flbl">'+label+'</label>');
+    a('<select class="fsel" onchange="S.convModal.'+field+'=this.value">');
+    ['Não','Sim'].forEach(function(v){a('<option value="'+v+'"'+(cm[field]===v?' selected':'')+'>'+v+'</option>');});
+    a('</select></div>');
+  });
+  a('</div>');
+  a('<div style="display:flex;gap:8px;justify-content:flex-end">');
+  a('<button onclick="closeConvModal()" style="padding:10px 18px;border-radius:9px;border:1px solid #e5e7eb;background:#fff;color:#374151;font-weight:700;cursor:pointer;font-family:inherit">Fechar</button>');
+  a('<button id="btn-conv" onclick="executarConversao()" style="padding:10px 22px;border-radius:9px;border:none;background:#4f46e5;color:#fff;font-weight:800;cursor:pointer;font-family:inherit">➡️ Converter em Pedido</button>');
+  a('</div></div></div>');
+  var ov=document.getElementById("conv-overlay");
+  if(!ov){ov=document.createElement("div");ov.id="conv-overlay";document.body.appendChild(ov);}
+  ov.innerHTML=H.join("");
+}
+
+function closeConvModal(){
+  var ov=document.getElementById("conv-overlay");
+  if(ov) ov.innerHTML="";
+  S.convModal=null;
+}
+
+async function executarConversao(){
+  var cm=S.convModal; if(!cm) return;
+  var orc=cm.orc;
+  var items=(orc.items||[]).filter(function(it){return it.produto;});
+  if(!items.length){alert("Nenhum produto no orçamento.");return;}
+  var btn=document.getElementById("btn-conv");
+  if(btn){btn.textContent="Convertendo...";btn.disabled=true;}
+  try{
+    var dataVenda=today();
+    for(var ii=0;ii<items.length;ii++){
+      var it=items[ii];
+      var qtd=it.qtd||1;
+      var pr=it.valorUn||0;
+      var row=[
+        dataVenda,                                   // A Data Venda
+        orc.cliente,                                 // B Pessoa
+        it.produto,                                  // C Impressão
+        "",                                          // D Família (FÓRMULA)
+        it.cor||"",                                  // E Cor
+        cm.realizado,                                // F Realizado
+        cm.entregue,                                 // G Entregue
+        cm.pago,                                     // H Pago
+        "",                                          // I Check (FÓRMULA)
+        cm.pago==="Sim"?dataVenda:"",               // J Data Pag
+        qtd,                                         // L=12th Qtdd... wait
+        pr                                           // L Preço unitário
+      ];
+      // Append A:L
+      var res=await fetch(
+        "https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"/values/"+encodeURIComponent("Pedidos!A:L")+":append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&includeValuesInResponse=true",
+        {method:"POST",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:JSON.stringify({values:[row]})}
+      );
+      var data=await res.json();
+      var updRange=data?.updates?.updatedRange||"";
+      var m=updRange.match(/(\d+)$/);
+      if(!m) throw new Error("Não foi possível obter o número da linha inserida (item "+(ii+1)+").");
+      var newRow=parseInt(m[1]);
+      var prevRow=newRow-1;
+      // Copy formulas D (Família) and I (Check) from previous row
+      async function copyFC(col){
+        try{
+          var fr=await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"?ranges="+encodeURIComponent("Pedidos!"+col+prevRow)+"&fields=sheets.data.rowData.values.userEnteredValue",
+            {headers:{Authorization:"Bearer "+gToken}});
+          var fd=await fr.json();
+          var form=fd?.sheets?.[0]?.data?.[0]?.rowData?.[0]?.values?.[0]?.userEnteredValue?.formulaValue;
+          if(form){
+            await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"/values/"+encodeURIComponent("Pedidos!"+col+newRow)+"?valueInputOption=USER_ENTERED",
+              {method:"PUT",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:JSON.stringify({values:[[form]]})});
+          }
+        }catch(e){console.warn("copyFC",col,e);}
+      }
+      await Promise.all([copyFC("D"),copyFC("I")]);
+      // Write AD:AE (Número Orçamento, Data Orçamento)
+      await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+SHEET_ID+"/values/"+encodeURIComponent("Pedidos!AD"+newRow+":AE"+newRow)+"?valueInputOption=USER_ENTERED",
+        {method:"PUT",headers:{Authorization:"Bearer "+gToken,"Content-Type":"application/json"},body:JSON.stringify({values:[[orc.numero,orc.data]]})});
+    }
+    // Mark orçamento as Convertido
+    await salvarStatusOrc(cm.idx,"Convertido");
+    Object.keys(_c).filter(function(k){return k.includes(SHEET_ID)&&k.includes("Pedidos");}).forEach(function(k){delete _c[k];});
+    alert("✅ "+items.length+" pedido(s) inserido(s) com sucesso!");
+    closeConvModal();
+    await loadPed();
+    go("pedidos");
+  }catch(e){
+    if(btn){btn.textContent="➡️ Converter em Pedido";btn.disabled=false;}
+    alert("Erro ao converter: "+e.message);
+  }
 }
 
 async function marcarOrcPerdido(i){
