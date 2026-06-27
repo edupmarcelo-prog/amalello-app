@@ -461,7 +461,7 @@ function orcItemInput(el){
   var field=el.getAttribute('data-field');
   if(!S.editOrc||!S.editOrc.items||isNaN(i)) return;
   if(field==='qtd') S.editOrc.items[i][field]=+el.value||1;
-  else S.editOrc.items[i][field]=parseFloat(String(el.value).replace(',','.'))||0;
+  else{var nv=String(el.value).replace(',','.');if(el.value!==nv){var cp=el.selectionStart;el.value=nv;try{el.setSelectionRange(cp,cp);}catch(e){}}S.editOrc.items[i][field]=parseFloat(nv)||0;}
   clearTimeout(window._ot);
   window._ot=setTimeout(function(){
     var aid=document.activeElement?document.activeElement.id:'';
